@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { NButton, NFlex, NLayout, NLayoutContent, NLayoutHeader } from 'naive-ui';
+import { RouterLink, RouterView } from 'vue-router';
 import GameBoard from '@/components/GameBoard.vue';
 import { createGame } from '@/game/gameState';
 
@@ -14,6 +16,21 @@ function startGame() {
 </script>
 
 <template>
+    <n-layout>
+        <n-layout-header>
+            <n-flex>
+                <router-link :to="{ name: 'Me' }">
+                    To me
+                </router-link>
+                <router-link :to="{ name: 'Game' }">
+                    To game
+                </router-link>
+            </n-flex>
+        </n-layout-header>
+        <n-layout-content>
+            <router-view/>
+        </n-layout-content>
+    </n-layout>
     <main class="home">
         <header class="home__header">
             <h1>Захват территории</h1>

@@ -11,5 +11,5 @@ import lombok.Setter;
 @AllArgsConstructor
 public class DeliveryEvent {
     private String type;
-    private Object subject;
+    private Object payload;
 }
