@@ -1,0 +1,48 @@
+package com.shouryuuko.aizo.security;
+
+import com.shouryuuko.aizo.services.UserService;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.stereotype.Component;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Component
+public class KeycloakAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
+    private final JwtGrantedAuthoritiesConverter defaultAuthoritiesConverter;
+    private final UserService userService;
+
+    public KeycloakAuthenticationConverter(UserService userService) {
+        this.defaultAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        this.userService = userService;
+    }
+
+    @Override
+    public AbstractAuthenticationToken convert(Jwt jwt) {
+        this.userService.synchronizeUser(jwt);
+
+        Collection<GrantedAuthority> authorities = this.defaultAuthoritiesConverter.convert(jwt);
+
+        Map<String, Object> accesses = jwt.getClaim("realm_access");
+        if (accesses != null && accesses.containsKey("roles")) {
+            var roles = ((Collection<?>) accesses.get("roles")).stream()
+                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                    .collect(Collectors.toSet());
+
+            authorities = Stream.concat(authorities.stream(), roles.stream())
+                    .collect(Collectors.toSet());
+        }
+
+        String principalName = jwt.getSubject();
+        return new JwtAuthenticationToken(jwt, authorities, Objects.requireNonNull(principalName));
+    }
+}
