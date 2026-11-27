@@ -67,7 +67,6 @@ export class EventSystem {
 
         this.controller = new AbortController();
 
-        // click event
         this.clickable = [];
         cnv.addEventListener('mousedown', event => {
             if (!context.canClick) return;
@@ -83,7 +82,6 @@ export class EventSystem {
             }
         }, { signal: this.controller.signal });
 
-        // hover event
         this.hoverable = [];
         cnv.addEventListener('mousemove', event => {
             if (!context.canHover) return;

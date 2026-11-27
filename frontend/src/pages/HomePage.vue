@@ -1,25 +1,29 @@
 <script setup>
-import { useAuthStore } from '@/stores/auth';
-import { NButton, NFlex, NLayout, NLayoutContent, NLayoutHeader } from 'naive-ui';
-import { RouterLink, RouterView } from 'vue-router';
-
-const authStore = useAuthStore();
+import { RouterView } from 'vue-router'
+import AppHeader from '@/components/layout/AppHeader.vue'
 </script>
 
 <template>
-    <n-layout>
-        <n-layout-header>
-            <n-flex>
-                <router-link :to="{ name: 'Me' }">
-                    To me
-                </router-link>
-                <router-link :to="{ name: 'Game' }">
-                    To game
-                </router-link>
-            </n-flex>
-        </n-layout-header>
-        <n-layout-content>
-            <router-view/>
-        </n-layout-content>
-    </n-layout>
+    <div class="home">
+        <AppHeader />
+        <main class="home__content">
+            <RouterView />
+        </main>
+    </div>
 </template>
+
+<style lang="scss" scoped>
+.home {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    &__content {
+        flex: 1;
+        width: 100%;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+}
+</style>
