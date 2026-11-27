@@ -261,6 +261,16 @@ function endGame() {
     fill-opacity: 0.12;
 }
 
+.game__territory--B {
+    stroke: #202020;
+    fill: #202020;
+}
+
+.game__territory--R {
+    stroke: #d32f2f;
+    fill: #d32f2f;
+}
+
 .game__draft {
     fill: none;
     stroke: #3574c8;
@@ -272,6 +282,24 @@ function endGame() {
 .game__point {
     cursor: pointer;
     outline: none;
+}
+
+.game__point--empty {
+    fill: transparent;
+}
+
+.game__point--empty:hover,
+.game__point--empty:focus {
+    fill: #3574c8;
+    fill-opacity: 0.25;
+}
+
+.game__point--B {
+    fill: #202020;
+}
+
+.game__point--R {
+    fill: #d32f2f;
 }
 
 .game__actions button {
