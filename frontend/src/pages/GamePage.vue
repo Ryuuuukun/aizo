@@ -1,37 +1,35 @@
 <script setup>
-import { DrawSystem, EventSystem } from '@/lib/base';
-import { Engine } from '@/lib/ecs';
-import { NP } from 'naive-ui';
-import { onMounted, ref } from 'vue';
+import { NButton, NInput } from 'naive-ui';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
-const canvas  = ref(null);
-const context = ref(null);
+import { online } from '@/api/services/game.js';
 
-/*
-GameState {
-    points: ...
-    territory: ...
+const session = computed(() => online.session);
 
-    turnPlayer: ...
-    playerA: ...
-    playerB: ...
-}
+onMounted(() => {
+    try {
+        online.active();
+    } catch (error) {
+        // активной сесси может не быть
+    }
+});
 
-*/
+onUnmounted(() => {
+    online.clear();
+});
 </script>
 
 <template>
-    <canvas ref="canvas" class="canvas" width="500" height="500"/>
+
+    <n-button @click="online.create(10)">
+        Создать сессию
+    </n-button>
+    <n-input/>
+    <n-button @click="onlineGame.join(sessionId)">
+        Присоединиться к сессии
+    </n-button>
+    <n-button @click="online.offer()">
+        Закончить сессию
+    </n-button>
+    Текущая сессия: {{ session }}
 </template>
-
-<style lang="scss">
-.ava {
-    width: 3rem;
-    height: 3rem;
-    background: red;
-}
-
-.canvas {
-    outline: 2px solid red;
-}
-</style>
