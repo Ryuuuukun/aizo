@@ -5,6 +5,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { online } from '@/api/services/game.js';
 
 const session = computed(() => online.session);
+const join = ref('');
 
 onMounted(() => {
     try {
@@ -24,8 +25,8 @@ onUnmounted(() => {
     <n-button @click="online.create(10)">
         Создать сессию
     </n-button>
-    <n-input/>
-    <n-button @click="onlineGame.join(sessionId)">
+    <n-input v-model:value="join"/>
+    <n-button @click="online.join(join)">
         Присоединиться к сессии
     </n-button>
     <n-button @click="online.offer()">

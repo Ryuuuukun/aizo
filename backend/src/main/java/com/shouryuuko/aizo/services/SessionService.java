@@ -34,9 +34,7 @@ public class SessionService {
     public SessionResponse createSession(UUID userId, SessionCreateRequest request) {
         var user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found."));
-        if (this.sessionRepository.findByUserAndStatusIn(user,
-                List.of(Session.GameStatus.ACTIVE, Session.GameStatus.WAITING, Session.GameStatus.OFFERING)).isPresent()
-        ) {
+        if (this.sessionRepository.hasUnfinishedSessions(user)) {
             throw new SessionConflictException("The user cannot participate in more than one active session.");
         }
 
@@ -53,9 +51,7 @@ public class SessionService {
     public SessionResponse joinSession(UUID userId, UUID sessionId) {
         var user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found"));
-        if (this.sessionRepository.findByUserAndStatusIn(user,
-                List.of(Session.GameStatus.ACTIVE, Session.GameStatus.WAITING, Session.GameStatus.OFFERING)).isPresent()
-        ) {
+        if (this.sessionRepository.hasUnfinishedSessions(user)) {
             throw new SessionConflictException("The user cannot participate in more than one active session.");
         }
 
@@ -136,7 +132,7 @@ public class SessionService {
     public SessionResponse getActiveSession(UUID userId) {
         var user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found."));
-        var session = this.sessionRepository.findByCreatorOrOpponent(user, user)
+        var session = this.sessionRepository.findUnfinishedSession(user)
                 .orElseThrow(() -> new NotFoundException("Session was not found."));
 
         return this.sessionMapper.toResponse(session);
