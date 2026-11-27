@@ -75,23 +75,6 @@ class WebSocketService {
                 message => callback(message));
         }
     }
-
-    send(destination, data) {
-        if (!this.connected || !this.client) {
-            console.warn('Cannot send: STOMP is not connected');
-            return false;
-        }
-
-        this.client.publish({
-            destination,
-            body: JSON.stringify(data),
-            headers: {
-                'content-type': 'application/json'
-            }
-        });
-
-        return true;
-    }
 }
 
 export const socket = new WebSocketService();
