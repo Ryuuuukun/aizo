@@ -7,10 +7,6 @@ function cross(a, b, c) {
          - (b.y - a.y) * (c.x - a.x);
 }
 
-function dot(a, b) {
-    return a.x * b.x + a.y * b.y;
-}
-
 function equalPoints(a, b) {
     return a.x === b.x && a.y === b.y;
 }
