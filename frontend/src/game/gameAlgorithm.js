@@ -1,4 +1,4 @@
-import { parseGameData } from './parseGameData.js';
+const gameData = 0; // Нужно заменить на реальные данные
 
 const EPS = 1e-9;
 
