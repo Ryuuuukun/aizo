@@ -30,30 +30,26 @@ const query = computed({
 })
 
 async function onCreate() {
-    const session = await service.create({ size: 10 });
+    const data = await createDialog.open()
+    if (!data) return
 
-    message.success('Игра создана');
-    router.push({ name: 'OnlineGame', params: { id: session.id } });
-    // const data = await createDialog.open()
-    // if (!data) return
+    try {
+        const session = await service.create(data);
 
-    // try {
-    //     const session = await service.create(data);
-
-    //     message.success('Игра создана');
-    //     router.push({ name: 'OnlineGame', params: { id: session.id } });
-    // } catch (e) {
-    //     message.error(e.message || 'Не удалось создать игру');
-    // }
+        message.success('Игра создана');
+        router.push({ name: 'OnlineGame', params: { id: session.id } });
+    } catch (e) {
+        message.error(e.message || 'Не удалось создать игру');
+    }
 }
 
 async function onJoin(id) {
-    // try {
-    //     await lobby.joinGame(id)
-    //     router.push({ name: 'OnlineGame', params: { id } })
-    // } catch (e) {
-    //     message.error(e.message || 'Не удалось присоединиться')
-    // }
+    try {
+        const session = await service.join(id);
+        router.push({ name: 'OnlineGame', params: { id } });  
+    } catch (e) {
+        message.error(e.message || 'Не удалось присоединиться');
+    }
 }
 
 async function onRefresh() {

@@ -13,10 +13,15 @@ export function useSessionSevice() {
         return response.data;
     }
 
+    async function join(session) {
+        const response = await client.post(`${API_SESSION_URL}/${session}/join`);
+        return response.data;
+    }
+
     async function create({ size, name } = { }) {
         const response = await client.post(API_SESSION_URL, { size, name });
         return response.data;
     }
 
-    return { waiting, active, create };
+    return { waiting, active, join, create };
 }

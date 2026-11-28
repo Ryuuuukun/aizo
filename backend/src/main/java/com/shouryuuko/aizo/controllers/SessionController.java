@@ -4,6 +4,7 @@ import com.shouryuuko.aizo.dto.session.*;
 import com.shouryuuko.aizo.security.CurrentUserProvider;
 import com.shouryuuko.aizo.services.SessionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,8 +32,9 @@ public class SessionController {
     }
 
     @PostMapping("/{id}/move")
-    public ResponseEntity<Void> postMakeMove(@PathVariable UUID id, @RequestBody SessionMoveRequest request) {
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<SessionResponse> postMakeMove(@PathVariable UUID id, @RequestBody SessionMoveRequest request) {
+        return ResponseEntity.ok(this.sessionService
+                .makeMove(this.userProvider.getCurrentUserId(), id, request));
     }
 
     @PostMapping("/{id}/offer")
@@ -54,7 +56,7 @@ public class SessionController {
     }
 
     @GetMapping("/waiting")
-    public ResponseEntity<List<SessionResponse>> getWaitingSessions(Pageable pageable) {
+    public ResponseEntity<Page<SessionResponse>> getWaitingSessions(Pageable pageable) {
         return ResponseEntity.ok(this.sessionService
                 .getWaitingSessions(pageable));
     }

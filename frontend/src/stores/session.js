@@ -8,6 +8,7 @@ const API_SESSION_URL = '/api/session';
 export function useSession() {
     const session = ref(null);
     const subscribe = null;
+    const listeners = new Map();
 
     const message = useMessage();
 
@@ -42,9 +43,14 @@ export function useSession() {
     }
 
     function clear() {
+        listeners.clear();
         session.value = null;
         subscribe.value?.unsubscribe();
         subscribe.value = null;
+    }
+
+    function listener(event, listener) {
+        listeners.set(event, listener);
     }
 
     function _initSession(_session) {
@@ -53,7 +59,7 @@ export function useSession() {
             const response = JSON.parse(event.body);
             this.session = response.payload;
 
-            console.log(response.type, this.session);
+            listeners.get(response.type)(response.type, this.session);
         });
     }
 

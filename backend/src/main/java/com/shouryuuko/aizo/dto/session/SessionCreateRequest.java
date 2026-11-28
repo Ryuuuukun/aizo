@@ -8,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SessionCreateRequest {
-    private final Integer size;
-    private final Long timerLimit;
+    private Integer size;
+    private String name;
+    private Long timerLimit;
 }

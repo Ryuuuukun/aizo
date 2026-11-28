@@ -17,6 +17,7 @@ import com.shouryuuko.aizo.map.SessionMapper;
 import com.shouryuuko.aizo.repository.SessionRepository;
 import com.shouryuuko.aizo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,7 @@ public class SessionService {
 
         var session = Session.builder()
                 .creator(user)
+                .name(request.getName())
                 .state(GameState.builder()
                         .board(Board.builder()
                                 .size(request.getSize())
@@ -99,6 +101,7 @@ public class SessionService {
 
         if (session.getStatus() == Session.GameStatus.WAITING || session.getStatus() == Session.GameStatus.OFFERING) {
             session.setStatus(Session.GameStatus.FINISHED);
+            session.setFinishedAt(LocalDateTime.now());
 
             var event = DeliveryEvent.builder()
                     .type("SESSION_FINISHED")
@@ -187,9 +190,9 @@ public class SessionService {
     }
 
     @Transactional
-    public List<SessionResponse> getWaitingSessions(Pageable pageable) {
-        return this.sessionMapper.toResponses(
-                this.sessionRepository.findAllByStatus(Session.GameStatus.WAITING, pageable));
+    public Page<SessionResponse> getWaitingSessions(Pageable pageable) {
+        return this.sessionRepository.findAllByStatus(Session.GameStatus.WAITING, pageable)
+                .map(this.sessionMapper::toResponse);
     }
 
     @Transactional

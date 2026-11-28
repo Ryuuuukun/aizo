@@ -2,6 +2,7 @@ package com.shouryuuko.aizo.repository;
 
 import com.shouryuuko.aizo.entity.Session;
 import com.shouryuuko.aizo.entity.User;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 @Repository
 public interface SessionRepository extends JpaRepository<Session, UUID> {
-    List<Session> findAllByStatus(Session.GameStatus status, Pageable pageable);
+    Page<Session> findAllByStatus(Session.GameStatus status, Pageable pageable);
 
     @Query("SELECT COUNT(s) > 0 FROM Session s WHERE (s.creator = :user OR s.opponent = :user) AND s.status <> com.shouryuuko.aizo.entity.Session.GameStatus.FINISHED")
     boolean hasUnfinishedSessions(@Param("user") User user);
