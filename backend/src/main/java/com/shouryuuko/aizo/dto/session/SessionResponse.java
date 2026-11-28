@@ -4,6 +4,7 @@ import com.shouryuuko.aizo.dto.user.UserResponse;
 import com.shouryuuko.aizo.entity.Session;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -24,4 +25,8 @@ public class SessionResponse {
     private LocalDateTime createdAt;
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;
+
+    private Long creatorRemainingMs;
+    private Long opponentRemainingMs;
+    private Instant serverTime;
 }
