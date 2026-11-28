@@ -1,9 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NAlert, NCard, NForm, NFormItem, NInputNumber, NButton, NFlex } from 'naive-ui'
+import {
+    NAlert,
+    NButton,
+    NCard,
+    NFlex,
+    NForm,
+    NFormItem,
+    NInputNumber,
+    NSelect,
+} from 'naive-ui'
 import { useGameStore } from '@/stores/game'
-import { onMounted } from 'vue'
 
 import GameBoard from '@/components/game/GameBoard.vue'
 import GameSidebar from '@/components/game/GameSidebar.vue'
@@ -15,31 +23,75 @@ const store = useGameStore()
 
 const size = ref(8)
 const started = ref(false)
+const difficulty = ref('random')
+const isComputerThinking = ref(false)
+let computerTurnTimer = null
+
+const difficultyOptions = [
+    { label: 'Случайная', value: 'random' },
+    { label: 'Сложная', value: 'hard' },
+]
 
 onMounted(() => {
     if (store.isFinished) store.reset()
 })
 
+onUnmounted(() => {
+    if (computerTurnTimer !== null) window.clearTimeout(computerTurnTimer)
+})
 
-function start() {
+function start(mode = 'local') {
     try {
-        store.newGame({ size: size.value, mode: 'local' })
+        store.newGame({ size: size.value, mode, difficulty: difficulty.value })
         started.value = true
     } catch (error) {
         store.error = error.message
     }
 }
 
+function scheduleComputerTurn() {
+    if (store.mode !== 'computer'
+        || store.currentPlayer !== 'R'
+        || store.pendingMove
+        || store.isFinished
+        || isComputerThinking.value) {
+        return
+    }
+
+    isComputerThinking.value = true
+    computerTurnTimer = window.setTimeout(() => {
+        computerTurnTimer = null
+        let turnTaken = false
+        try {
+            turnTaken = store.playComputerTurn()
+        } catch (error) {
+            store.error = error.message
+        } finally {
+            isComputerThinking.value = false
+            if (turnTaken
+                && store.mode === 'computer'
+                && store.currentPlayer === 'R'
+                && !store.pendingMove
+                && !store.isFinished) {
+                scheduleComputerTurn()
+            }
+        }
+    }, 400)
+}
+
 function onOfferEnd() {
+    if (isComputerThinking.value) return
     store.offerEnd()
 }
 
 function onPointClick(x, y) {
+    if (isComputerThinking.value) return
     store.handlePointClick(x, y)
+    scheduleComputerTurn()
 }
 
 function onAgain() {
-    start()
+    start(store.mode)
 }
 
 function onCloseResult() {
@@ -60,18 +112,33 @@ function onCloseResult() {
             {{ store.error }}
         </n-alert>
 
-        <n-card v-if="!started" title="Новая локальная игра" class="setup-card">
+        <n-card v-if="!started" title="Новая игра" class="setup-card">
             <n-form>
                 <n-form-item label="Размер поля (4–20)">
                     <n-input-number v-model:value="size" :min="4" :max="20" />
                 </n-form-item>
+                <n-form-item label="Сложность компьютера">
+                    <n-select v-model:value="difficulty" :options="difficultyOptions" />
+                </n-form-item>
             </n-form>
             <n-flex justify="end">
-                <n-button type="primary" @click="start">Начать игру</n-button>
+                <n-button @click="start('local')">Начать локальную игру</n-button>
+                <n-button type="primary" @click="start('computer')">
+                    Играть с компьютером
+                </n-button>
             </n-flex>
         </n-card>
 
         <div v-else class="game-layout">
+            <n-alert
+                v-if="isComputerThinking"
+                type="info"
+                :show-icon="false"
+                class="computer-status"
+            >
+                Компьютер думает…
+            </n-alert>
+
             <div class="game-layout__board">
                 <GameBoard
                     :size="store.size"
@@ -87,8 +154,8 @@ function onCloseResult() {
             <div class="game-layout__side">
                 <GameSidebar />
                 <GameControls
-                    :can-undo="store.canUndo"
-                    :can-end="store.canEndGame"
+                    :can-undo="!isComputerThinking && store.canUndo"
+                    :can-end="!isComputerThinking && store.canEndGame"
                     :wall-building="store.isWallBuilding"
                     @undo="store.undoMove"
                     @cancel-wall="store.cancelWall"
@@ -120,6 +187,10 @@ function onCloseResult() {
     max-width: 520px;
     margin: 40px auto;
     box-shadow: 0 8px 32px rgba(74, 108, 247, .08);
+}
+
+.computer-status {
+    grid-column: 1 / -1;
 }
 
 .game-layout {
