@@ -12,6 +12,8 @@ import com.shouryuuko.aizo.exception.SessionFullException;
 import com.shouryuuko.aizo.map.SessionMapper;
 import com.shouryuuko.aizo.repository.SessionRepository;
 import com.shouryuuko.aizo.repository.UserRepository;
+import com.shouryuuko.aizo.dto.session.SessionHistoryResponse;
+import com.shouryuuko.aizo.entity.GameState;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -133,12 +137,50 @@ public class SessionService {
         session.setCurrentState(newState);
 
         if (session.getStateHistory() == null) {
-            session.setStateHistory(new ArrayList<>());;
-        });
+            session.setStateHistory(new ArrayList<>());
+        }
 
-        session.getStateHistory().add(deepCopy(newState))
+        session.getStateHistory().add(deepCopy(newState));
 
         sessionRepository.save(session);
+    }
+
+    @Transactional(readOnly = true)
+    public SessionHistoryResponse getHistory(UUID userId, UUID sessionId){
+        var session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Session was not found"));
+
+        boolean isParticipant = session.getCreator().getId().equals(userId)
+                || (session.getOpponent() != null && session.getOpponent().getId().equals(userId));
+
+        if (!isParticipant) {
+            throw new SessionConflictException("Only a session participant can get the session history.");
+        }
+
+        var history = session.getStateHistory() == null
+                ? List.<GameState>of()
+                : session.getStateHistory();
+
+        return SessionHistoryResponse.builder()
+                .sessionId(sessionId)
+                .states(history)
+                .currentIndex(history.size() - 1)
+                .build();
+
+    }
+
+    @Transactional(readOnly = true)
+    public GameState getStateAt(UUID userId, UUID sessionId, int index) {
+        var history = getHistory(userId, sessionId);
+        if (index < 0 || index >= history.getStates().size()) {
+            throw new NotFoundException("State at index " + index + " was not found");
+        }
+        return history.getStates().get(index);
+
+    }
+
+    private GameState deepCopy(GameState state) {
+        return objectMapper.convertValue(state, GameState.class);
     }
 
     @Transactional

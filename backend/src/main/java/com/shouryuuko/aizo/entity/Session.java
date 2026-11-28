@@ -41,7 +41,7 @@ public class Session {
     @Column(name = "current_state")
     private GameState currentState;
 
-    @JDBCTypeCode(SqlTypes.JSON)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "state_history")
     private List<GameState> stateHistory = new ArrayList<>();
 

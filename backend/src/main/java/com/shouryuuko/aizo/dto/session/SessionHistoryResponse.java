@@ -14,5 +14,5 @@ import java.util.UUID;
 public class SessionHistoryResponse {
     private UUID sessionId;
     private List<GameState> states;
-    private Integer currentIndex
+    private Integer currentIndex;
 }
