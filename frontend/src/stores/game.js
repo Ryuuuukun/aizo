@@ -21,6 +21,7 @@ export const useGameStore = defineStore('game', {
         mode: 'local',
         game: createGame(8),
         error: null,
+        turnDuration: 300,
     }),
 
     getters: {
@@ -55,13 +56,14 @@ export const useGameStore = defineStore('game', {
     },
 
     actions: {
-        newGame({ size, mode = 'local' }) {
+        newGame({ size, duration = 300, mode = 'local' }) {
             this.game = createGame(size)
             this.id = null
             this.mode = mode
+            this.turnDuration = duration
             this.error = null
         },
-
+        
         handlePointClick(x, y) {
             if (this.game.status !== 'PLAYING') return
             if (!Number.isInteger(x)

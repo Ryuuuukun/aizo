@@ -9,7 +9,10 @@ defineProps({
     <div class="player-card" :class="{ 'player-card--active': active }">
         <span class="player-card__dot" :class="`player-card__dot--${player.color}`" />
         <div class="player-card__info">
-            <div class="player-card__name">{{ player.name }}</div>
+            <div class="player-card__name">
+                {{ player.name }}
+                <span v-if="player.isMe" class="player-card__you">(вы)</span>
+            </div>
             <div class="player-card__score">Территория: {{ player.score }}</div>
         </div>
     </div>
@@ -38,5 +41,12 @@ defineProps({
 
     &__name  { font-weight: 600; font-size: 15px; }
     &__score { font-size: 13px; color: #6b7280; }
+}
+
+.player-card__you {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 400;
+    margin-left: 4px;
 }
 </style>
