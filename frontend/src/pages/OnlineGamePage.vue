@@ -1,7 +1,10 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { NAlert, NButton, NSpin, useMessage } from 'naive-ui'
+import { useSession } from '@/stores/session';
+import { NCard } from 'naive-ui'
+
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { NSpin, NButton } from 'naive-ui'
 import GameBoard from '@/components/game/GameBoard.vue'
 import GameSidebar from '@/components/game/GameSidebar.vue'
 import GameControls from '@/components/game/GameControls.vue'
