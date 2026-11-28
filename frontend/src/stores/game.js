@@ -9,16 +9,47 @@ import {
     getScores,
     placePoint,
 } from '../game/gameState.js'
+import {
+    chooseBoundary,
+    findLegalBoundary,
+    hardDecision,
+    randomDecision,
+} from '../ai/randomAlgortihm.js'
 
 const PLAYER_DETAILS = [
     { name: 'Игрок 1', color: 'black', territory: 'B' },
     { name: 'Игрок 2', color: 'red', territory: 'R' },
 ]
 
+function getPlayerDetails(mode) {
+    if (mode === 'computer') {
+        return [
+            { name: 'Вы', color: 'black', territory: 'B' },
+            { name: 'Компьютер', color: 'red', territory: 'R' },
+        ]
+    }
+    return PLAYER_DETAILS
+}
+
+function completeComputerBoundary(state, boundary) {
+    let next = beginBoundary(state, boundary[0].x, boundary[0].y)
+    for (const point of boundary.slice(1)) {
+        next = extendBoundary(next, point.x, point.y)
+    }
+    return extendBoundary(next, boundary[0].x, boundary[0].y)
+}
+
+function rotateBoundaryToPoint(boundary, point) {
+    const startIndex = boundary.findIndex(candidate =>
+        candidate.x === point.x && candidate.y === point.y)
+    return [...boundary.slice(startIndex), ...boundary.slice(0, startIndex)]
+}
+
 export const useGameStore = defineStore('game', {
     state: () => ({
         id: null,
         mode: 'local',
+        difficulty: 'random',
         game: createGame(8),
         error: null,
         turnDuration: 300,
@@ -36,7 +67,7 @@ export const useGameStore = defineStore('game', {
         isWallBuilding: state => state.game.pendingMove?.kind === 'boundary',
         turn: state => state.game.currentPlayer === 'B' ? 0 : 1,
         activePlayer: state => {
-            const player = PLAYER_DETAILS[state.game.currentPlayer === 'B' ? 0 : 1]
+            const player = getPlayerDetails(state.mode)[state.game.currentPlayer === 'B' ? 0 : 1]
             return { name: player.name, color: player.color }
         },
         winner: state => {
@@ -47,7 +78,7 @@ export const useGameStore = defineStore('game', {
         },
         players: state => {
             const scores = getScores(state.game)
-            return PLAYER_DETAILS.map(player => ({
+            return getPlayerDetails(state.mode).map(player => ({
                 name: player.name,
                 color: player.color,
                 score: scores[player.territory],
@@ -56,11 +87,18 @@ export const useGameStore = defineStore('game', {
     },
 
     actions: {
-        newGame({ size, duration = 300, mode = 'local' }) {
+        newGame({ size, mode = 'local', difficulty = 'random' }) {
+            if (!['local', 'computer'].includes(mode)) {
+                throw new Error('Выбран неизвестный режим игры.')
+            }
+            if (!['random', 'hard'].includes(difficulty)) {
+                throw new Error('Выбрана неизвестная сложность компьютера.')
+            }
+
             this.game = createGame(size)
             this.id = null
             this.mode = mode
-            this.turnDuration = duration
+            this.difficulty = difficulty
             this.error = null
         },
         
@@ -106,6 +144,38 @@ export const useGameStore = defineStore('game', {
             }
         },
 
+        playComputerTurn() {
+            if (this.mode !== 'computer'
+                || this.game.currentPlayer !== 'R'
+                || this.game.pendingMove
+                || this.game.status !== 'PLAYING') {
+                return false
+            }
+
+            const existingBoundary = chooseBoundary(
+                findLegalBoundary(this.game, 'R'),
+                this.difficulty
+            )
+            if (existingBoundary) {
+                this.game = completeComputerBoundary(this.game, existingBoundary)
+                this.error = null
+                return true
+            }
+
+            const decide = this.difficulty === 'hard' ? hardDecision : randomDecision
+            const point = decide(this.game.board, 'R')
+            const afterPoint = placePoint(this.game, point.x, point.y)
+            const newBoundary = chooseBoundary(
+                findLegalBoundary(afterPoint, 'R', point),
+                this.difficulty
+            )
+            this.game = newBoundary
+                ? completeComputerBoundary(afterPoint, rotateBoundaryToPoint(newBoundary, point))
+                : finishPointTurn(afterPoint)
+            this.error = null
+            return true
+        },
+
         confirmWall() {
             const move = this.game.pendingMove
             if (move?.kind !== 'boundary') return
@@ -135,6 +205,7 @@ export const useGameStore = defineStore('game', {
             this.game = createGame(this.game.size)
             this.id = null
             this.mode = 'local'
+            this.difficulty = 'random'
             this.error = null
         },
     },
