@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
     NCard, NButton, NInput, NFlex, NPagination, useMessage,
@@ -7,53 +7,68 @@ import {
 import { useLobbyStore } from '@/stores/lobby'
 import { useCreateGameDialog } from '@/composables/useCreateGameDialog.js'
 import GameList from '@/components/lobby/GameList.vue'
+import { useSessionSevice } from '@/api/services/session'
 
 const router = useRouter()
 const message = useMessage()
 const lobby = useLobbyStore()
 const createDialog = useCreateGameDialog()
 
-onMounted(() => {
-    lobby.fetchGames()
-})
+const service = useSessionSevice();
+
+const page = ref(0);
+const total = ref(0);
+const sessions = ref([]);
+
+onMounted(async () => {
+    await onRefresh();
+});
 
 const query = computed({
     get: () => lobby.query,
     set: (v) => lobby.setQuery(v),
 })
 
-const page = computed({
-    get: () => lobby.page,
-    set: (v) => lobby.setPage(v),
-})
-
 async function onCreate() {
-    const data = await createDialog.open()
-    if (!data) return
-    try {
-        const id = await lobby.createGame(data)
-        message.success('Игра создана')
-        router.push({ name: 'OnlineGame', params: { id } })
-    } catch (e) {
-        message.error(e.message || 'Не удалось создать игру')
-    }
+    const session = await service.create({ size: 10 });
+
+    message.success('Игра создана');
+    router.push({ name: 'OnlineGame', params: { id: session.id } });
+    // const data = await createDialog.open()
+    // if (!data) return
+
+    // try {
+    //     const session = await service.create(data);
+
+    //     message.success('Игра создана');
+    //     router.push({ name: 'OnlineGame', params: { id: session.id } });
+    // } catch (e) {
+    //     message.error(e.message || 'Не удалось создать игру');
+    // }
 }
 
 async function onJoin(id) {
-    try {
-        await lobby.joinGame(id)
-        router.push({ name: 'OnlineGame', params: { id } })
-    } catch (e) {
-        message.error(e.message || 'Не удалось присоединиться')
-    }
+    // try {
+    //     await lobby.joinGame(id)
+    //     router.push({ name: 'OnlineGame', params: { id } })
+    // } catch (e) {
+    //     message.error(e.message || 'Не удалось присоединиться')
+    // }
 }
 
-function onRefresh() {
-    lobby.fetchGames()
+async function onRefresh() {
+    try {
+        const data = await service.waiting({ page: page.value });
+        total.value = data.totalPages;
+        sessions.value = data.content;
+    } catch (e) {
+        message.error(e.message || 'Произошла непредвиденная ошибка');
+    }
 }
 </script>
 
 <template>
+
     <n-card title="Онлайн-игры" class="lobby">
         <n-flex vertical size="large">
             <n-flex justify="space-between" align="center" wrap>
@@ -69,16 +84,20 @@ function onRefresh() {
                 </n-flex>
             </n-flex>
 
-            <GameList
+            <!-- <GameList
+                
                 :games="lobby.pagedGames"
                 :loading="lobby.loading"
                 @join="onJoin"
-            />
+            /> -->
 
-            <n-flex v-if="lobby.totalPages > 1" justify="center">
+            {{
+                sessions
+            }}
+
+            <n-flex v-if="total > 1" justify="center">
                 <n-pagination
-                    v-model:page="page"
-                    :page-count="lobby.totalPages"
+                    v-model:page="page" :page-count="total"
                 />
             </n-flex>
         </n-flex>
