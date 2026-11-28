@@ -1,6 +1,7 @@
 package com.shouryuuko.aizo.controllers;
 
 import com.shouryuuko.aizo.exception.NotFoundException;
+import com.shouryuuko.aizo.exception.SessionBadRequestException;
 import com.shouryuuko.aizo.exception.SessionConflictException;
 import com.shouryuuko.aizo.exception.SessionFullException;
 import org.springframework.http.HttpStatus;
@@ -15,10 +16,14 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException e) {
         return build(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(SessionBadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionBadRequest(SessionBadRequestException e) {
+        return build(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(SessionFullException.class)

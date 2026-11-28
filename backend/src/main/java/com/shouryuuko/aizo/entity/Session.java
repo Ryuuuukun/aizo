@@ -30,6 +30,10 @@ public class Session {
     private GameStatus status;
 
     @ManyToOne
+    @JoinColumn(name = "state_id")
+    private GameState state;
+
+    @ManyToOne
     @JoinColumn(name = "current_player_id")
     private User turnPlayer;
 
