@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, computed } from 'vue'
 
 const props = defineProps({
     activePlayer: { type: String, required: true },
@@ -10,7 +10,8 @@ const props = defineProps({
     opponentRemainingMs: { type: Number, default: null },
     serverTime: { type: String, default: null },
     timeLimitMs: { type: Number, default: null },
-    autoFinish: { type: Boolean, default: true }
+    autoFinish: { type: Boolean, default: true },
+    paused: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['timeout'])
@@ -19,6 +20,9 @@ const timeLeft = ref({ B: 0, R: 0 })
 let timer = null
 let lastTickAt = 0
 let serverOffset = 0
+
+// Поддерживаем и локальный PLAYING, и бэкендовский ACTIVE
+const isGameRunning = computed(() => props.status === 'PLAYING' || props.status === 'ACTIVE')
 
 function formatTime(ms) {
     if (ms <= 0) return '0:00'
@@ -38,9 +42,7 @@ function syncFromProps() {
     if (props.creatorRemainingMs != null && props.opponentRemainingMs != null) {
         timeLeft.value.B = props.creatorRemainingMs
         timeLeft.value.R = props.opponentRemainingMs
-        serverOffset = props.serverTime
-            ? new Date(props.serverTime).getTime() - Date.now()
-            : 0
+        serverOffset = props.serverTime ? new Date(props.serverTime).getTime() - Date.now() : 0
         lastTickAt = Date.now() + serverOffset
     } else if (props.duration != null) {
         timeLeft.value.B = props.duration * 1000
@@ -52,13 +54,19 @@ function syncFromProps() {
 
 function startTimer() {
     stopTimer()
-    if (props.status !== 'PLAYING') return
+    if (!isGameRunning.value) return
     syncFromProps()
 
     timer = setInterval(() => {
-        if (props.status !== 'PLAYING') return
+        if (!isGameRunning.value) return
 
         const now = Date.now() + serverOffset
+        
+        if (props.paused) {
+            lastTickAt = now
+            return
+        }
+
         const elapsed = now - lastTickAt
         lastTickAt = now
 
@@ -80,15 +88,19 @@ function stopTimer() {
     }
 }
 
+watch(() => props.activePlayer, () => {
+    lastTickAt = Date.now() + serverOffset
+})
+
 watch(
     () => [props.creatorRemainingMs, props.opponentRemainingMs, props.serverTime],
     () => {
-        if (props.status === 'PLAYING') syncFromProps()
+        if (isGameRunning.value) syncFromProps()
     }
 )
 
 watch(() => props.status, (newStatus) => {
-    if (newStatus === 'PLAYING') startTimer()
+    if (newStatus === 'PLAYING' || newStatus === 'ACTIVE') startTimer()
     else stopTimer()
 }, { immediate: true })
 
@@ -102,7 +114,7 @@ onUnmounted(() => stopTimer())
             :key="p.color"
             class="chess-clock"
             :class="{
-                'chess-clock--active': activePlayer === (p.color === 'black' ? 'B' : 'R') && status === 'PLAYING',
+                'chess-clock--active': activePlayer === (p.color === 'black' ? 'B' : 'R') && (status === 'PLAYING' || status === 'ACTIVE'),
                 'chess-clock--danger': timeLeft[p.color === 'black' ? 'B' : 'R'] <= 10000
             }"
         >

@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NAlert, NCard, NForm, NFormItem, NInputNumber, NSelect, NButton, NFlex } from 'naive-ui'
 import {
     NAlert,
     NButton,
@@ -25,7 +24,10 @@ const store = useGameStore()
 const size = ref(8)
 const duration = ref(300)
 const started = ref(false)
-const mode = ref('local') // 'local' или 'bot'
+const mode = ref('local') // 'local' или 'computer'
+const difficulty = ref('random')
+const isComputerThinking = ref(false)
+let computerTurnTimer = null
 
 const durationOptions = [
     { label: '3 минуты', value: 180 },
@@ -36,10 +38,8 @@ const durationOptions = [
 
 const modeOptions = [
     { label: 'Два игрока (локально)', value: 'local' },
-    { label: 'Против бота', value: 'bot' },
-const difficulty = ref('random')
-const isComputerThinking = ref(false)
-let computerTurnTimer = null
+    { label: 'Против бота', value: 'computer' },
+]
 
 const difficultyOptions = [
     { label: 'Случайная', value: 'random' },
@@ -55,30 +55,24 @@ onUnmounted(() => {
     if (computerTurnTimer !== null) window.clearTimeout(computerTurnTimer)
 })
 
-function start(mode = 'local') {
+function start(startMode = 'local') {
     try {
-        store.newGame({ size: size.value, mode, difficulty: difficulty.value })
+        store.newGame({
+            size: size.value,
+            duration: duration.value,
+            mode: startMode,
+            difficulty: difficulty.value,
+        })
         started.value = true
 
-        if (mode.value === 'bot') {
-            maybeBotMove()
+        if (startMode === 'computer') {
+            scheduleComputerTurn()
         }
     } catch (error) {
         store.error = error.message
     }
 }
 
-function onOfferEnd() { store.offerEnd() }
-function onPointClick(x, y) {
-    if (mode.value === 'bot' && store.currentPlayer === 'R') return
-    
-    store.handlePointClick(x, y)
-    
-    if (mode.value === 'bot' && store.currentPlayer === 'R' && !store.isFinished) {
-        maybeBotMove()
-    }
-}
-function onAgain() { start() }
 function scheduleComputerTurn() {
     if (store.mode !== 'computer'
         || store.currentPlayer !== 'R'
@@ -109,15 +103,15 @@ function scheduleComputerTurn() {
     }, 400)
 }
 
-function onOfferEnd() {
-    if (isComputerThinking.value) return
-    store.offerEnd()
-}
-
 function onPointClick(x, y) {
     if (isComputerThinking.value) return
     store.handlePointClick(x, y)
     scheduleComputerTurn()
+}
+
+function onOfferEnd() {
+    if (isComputerThinking.value) return
+    store.offerEnd()
 }
 
 function onAgain() {
@@ -129,30 +123,9 @@ function onCloseResult() {
     router.push({ name: 'Menu' })
 }
 
-function onTimeout() { store.offerEnd() }
-
-
-// имитация бота
-function maybeBotMove() {
-    setTimeout(() => {
-        if (store.isFinished || store.currentPlayer !== 'R') return
-
-        const size = store.size
-        for (let y = 0; y <= size; y++) {
-            for (let x = 0; x <= size; x++) {
-                if (store.board[y][x] === '.') {
-                    store.handlePointClick(x, y)
-                    setTimeout(() => {
-                        store.handlePointClick(x, y)
-                    }, 300)
-                    return
-                }
-            }
-        }
-    }, 1000)
+function onTimeout() {
+    store.offerEnd()
 }
-
-
 </script>
 
 <template>
@@ -171,14 +144,14 @@ function maybeBotMove() {
                 </n-form-item>
                 <n-form-item label="Время на игрока">
                     <n-select v-model:value="duration" :options="durationOptions" />
-                <n-form-item label="Сложность компьютера">
+                </n-form-item>
+                <n-form-item v-if="mode === 'computer'" label="Сложность компьютера">
                     <n-select v-model:value="difficulty" :options="difficultyOptions" />
                 </n-form-item>
             </n-form>
             <n-flex justify="end">
-                <n-button @click="start('local')">Начать локальную игру</n-button>
-                <n-button type="primary" @click="start('computer')">
-                    Играть с компьютером
+                <n-button type="primary" @click="start(mode)">
+                    Начать игру
                 </n-button>
             </n-flex>
         </n-card>

@@ -32,8 +32,8 @@ export const useAuthStore = defineStore('auth', {
 
             try {
                 const authenticated = await instance.init({
-                    onLoad: 'check-sso',
-                    silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+                    // onLoad: 'check-sso',
+                    // silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
                     checkLoginIframe: false
                 });
 

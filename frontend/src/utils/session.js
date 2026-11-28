@@ -1,8 +1,8 @@
 
 export function resolvePlayerColor(session, userId) {
     if (!session || !userId) return null
-    if (session.creator?.id === userId) return 'B'
-    if (session.opponent?.id === userId) return 'R'
+    if (session.creator?.keycloak === userId) return 'B'
+    if (session.opponent?.keycloak === userId) return 'R'
     return null
 }
 

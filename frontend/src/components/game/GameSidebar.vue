@@ -9,12 +9,10 @@ import { resolveTurnColor } from '@/utils/session'
 import { usePlayerName } from '@/composables/usePlayerName'
 
 const props = defineProps({
-
     session: { type: Object, default: null },
-
     mode: { type: String, default: 'local' },
-
     myColor: { type: String, default: null },
+    paused: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['timeout'])
@@ -30,7 +28,6 @@ const { name: creatorName } = usePlayerName(creatorRef)
 const { name: opponentName } = usePlayerName(opponentRef)
 const { name: turnPlayerName } = usePlayerName(turnPlayerRef)
 
-
 const onlineTurnColor = computed(() =>
     isOnline.value ? resolveTurnColor(props.session) : null
 )
@@ -44,7 +41,6 @@ const activePlayer = computed(() => {
     }
     return store.activePlayer
 })
-
 
 const players = computed(() => {
     if (isOnline.value) {
@@ -65,7 +61,7 @@ const players = computed(() => {
     }
 
     const base = store.players
-    if (props.mode === 'bot') {
+    if (props.mode === 'computer') { // ИСПРАВЛЕНО: 'computer'
         return [
             base[0],
             { ...base[1], name: 'Бот' },
@@ -74,12 +70,10 @@ const players = computed(() => {
     return base
 })
 
-
 const timeLimitMs = computed(() => {
     if (!isOnline.value) return null
     const raw = props.session.timeLimit
     if (raw == null) return null
-
     return raw
 })
 
@@ -93,6 +87,7 @@ const activeIndex = computed(() => {
 
 <template>
     <aside class="game-sidebar">
+        <!-- Локальная игра / с ботом -->
         <TurnTimer
             v-if="!isOnline && !store.isFinished"
             :active-player="store.currentPlayer"
@@ -100,11 +95,13 @@ const activeIndex = computed(() => {
             :players="players"
             :duration="store.turnDuration"
             :auto-finish="true"
+            :paused="paused" 
             @timeout="emit('timeout')"
         />
 
+        <!-- Онлайн-игра (поддержка статуса ACTIVE) -->
         <TurnTimer
-            v-else-if="isOnline && session.status === 'PLAYING'"
+            v-else-if="isOnline && (session.status === 'PLAYING' || session.status === 'ACTIVE')"
             :active-player="onlineTurnColor"
             :status="session.status"
             :players="players"

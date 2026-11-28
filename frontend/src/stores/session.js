@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import { useMessage } from 'naive-ui';
 
 import { socket } from "@/api/websocket.js";
@@ -7,26 +8,26 @@ const API_SESSION_URL = '/api/session';
 
 export function useSession() {
     const session = ref(null);
-    const subscribe = null;
+    const subscribe = ref(null);
     const listeners = new Map();
 
     const message = useMessage();
 
-    async function load(session) {
+    async function load(id) {
         clear();
-        const response = await client.get(`${API_SESSION_URL}/${session}`);
+        const response = await client.get(`${API_SESSION_URL}/${id}`);
         _initSession(response.data);   
     }
 
-    async function join(session) {
+    async function join(id) {
         clear();
-        const response = await client.post(`${API_SESSION_URL}/${session}`);
+        const response = await client.post(`${API_SESSION_URL}/${id}/join`);
         _initSession(response.data);
     }
 
     async function offer() {
         if (session.value !== null) {
-            const response = await client.get(`${API_SESSION_URL}/${session.value.id}/offer`);
+            const response = await client.post(`${API_SESSION_URL}/${session.value.id}/offer`);
             session.value = response.data;
         } else {
             message.error('Вы не подключены к сессии');
@@ -38,7 +39,7 @@ export function useSession() {
             const response = await client.post(`${API_SESSION_URL}/${session.value.id}/move`, request);
             session.value = response.data;
         } else {
-            message.error('Вы не подключены к сесии');
+            message.error('Вы не подключены к сессии');
         }
     }
 
@@ -49,19 +50,22 @@ export function useSession() {
         subscribe.value = null;
     }
 
-    function listener(event, listener) {
-        listeners.set(event, listener);
+    function listener(event, callback) {
+        listeners.set(event, callback);
     }
 
     function _initSession(_session) {
         session.value = _session;
         subscribe.value = socket.subscribe('/user/queue/session', event => {
             const response = JSON.parse(event.body);
-            this.session = response.payload;
+            session.value = response.payload;
 
-            listeners.get(response.type)(response.type, this.session);
+            const callback = listeners.get(response.type);
+            if (callback) {
+                callback(response.type, session.value);
+            }
         });
     }
 
-    return { load, offer, move, clear };
+    return { session, load, join, offer, move, clear, listener };
 }

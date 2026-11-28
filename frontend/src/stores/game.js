@@ -88,7 +88,7 @@ export const useGameStore = defineStore('game', {
     },
 
     actions: {
-        newGame({ size, mode = 'local', difficulty = 'random' }) {
+        newGame({ size, duration = 300, mode = 'local', difficulty = 'random' }) {
             if (!['local', 'computer'].includes(mode)) {
                 throw new Error('Выбран неизвестный режим игры.')
             }
@@ -101,6 +101,7 @@ export const useGameStore = defineStore('game', {
             this.mode = mode
             this.difficulty = difficulty
             this.error = null
+            this.turnDuration = duration
         },
         
         handlePointClick(x, y) {
