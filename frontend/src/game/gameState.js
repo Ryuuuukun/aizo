@@ -1,6 +1,12 @@
 import { solve } from './gameAlgorithm.js';
 
 const PLAYERS = ['B', 'R'];
+const QUARTER_OFFSETS = [
+    { dx: 0.5, dy: 0.25 },
+    { dx: 0.5, dy: 0.75 },
+    { dx: 0.25, dy: 0.5 },
+    { dx: 0.75, dy: 0.5 },
+];
 
 const isInsideBoard = (state, point) =>
     Number.isInteger(point.x)
@@ -52,7 +58,7 @@ const getSolverData = (state, boundary) => ({
     newBoundary: boundary.map(({ x, y }) => [x, y])
 });
 
-export function createGame(size = 8) {
+export function createGame(size = 8, treasures = false) {
     if (!Number.isInteger(size) || size < 4 || size > 20) {
         throw new Error('Размер поля должен быть от 4 до 20.');
     }
@@ -61,6 +67,9 @@ export function createGame(size = 8) {
         size,
         board: Array.from({ length: size + 1 }, () => '.'.repeat(size + 1)),
         territories: [],
+        treasures: Array.isArray(treasures)
+            ? treasures
+            : treasures ? generateTreasures(size) : [],
         currentPlayer: 'B',
         boundaryFollowUpUsed: false,
         status: 'PLAYING',
@@ -269,8 +278,53 @@ function hasLegalBoundary(state) {
 }
 
 export function getScores(state) {
-    return state.territories.reduce((scores, territory) => {
-        scores[territory.owner] += territory.area ?? Math.abs(signedArea(territory.boundary));
-        return scores;
+    const scores = state.territories.reduce((result, territory) => {
+        result[territory.owner] += territory.area ?? Math.abs(signedArea(territory.boundary));
+        return result;
     }, { B: 0, R: 0 });
+
+    for (const treasure of state.treasures ?? []) {
+        for (const player of PLAYERS) {
+            const playerTerritories = state.territories.filter(
+                territory => territory.owner === player
+            );
+            if (playerTerritories.length === 0) continue;
+
+            let capturedQuarters = 0;
+            for (const { dx, dy } of QUARTER_OFFSETS) {
+                const probe = { x: treasure.x + dx, y: treasure.y + dy };
+                const isInside = playerTerritories.some(
+                    territory => pointLocation(probe, territory.boundary) === 1
+                );
+                if (isInside) capturedQuarters += 1;
+            }
+
+            if (capturedQuarters === 4) {
+                scores[player] += 4;
+            } else if (capturedQuarters === 2) {
+                scores[player] += 1.5;
+            }
+        }
+    }
+
+    return scores;
+}
+
+export function generateTreasures(size, count = Math.max(2, Math.floor(size * size * 0.1))) {
+    const maxCells = size * size;
+    const target = Math.min(count, maxCells);
+    const cells = [];
+
+    for (let y = 0; y < size; y += 1) {
+        for (let x = 0; x < size; x += 1) {
+            cells.push({ x, y });
+        }
+    }
+
+    for (let i = cells.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cells[i], cells[j]] = [cells[j], cells[i]];
+    }
+
+    return cells.slice(0, target);
 }

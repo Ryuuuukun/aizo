@@ -60,6 +60,7 @@ export const useGameStore = defineStore('game', {
         size: state => state.game.size,
         board: state => state.game.board,
         territories: state => state.game.territories,
+        treasures: state => state.game.treasures,
         pendingMove: state => state.game.pendingMove,
         currentPlayer: state => state.game.currentPlayer,
         isFinished: state => state.game.status === 'FINISHED',
@@ -88,21 +89,26 @@ export const useGameStore = defineStore('game', {
     },
 
     actions: {
-        newGame({ size, mode = 'local', difficulty = 'random' }) {
-            if (!['local', 'computer'].includes(mode)) {
+        newGame({
+            size,
+            mode = 'local',
+            difficulty = 'random',
+            treasures = mode === 'treasures',
+        }) {
+            if (!['local', 'computer', 'treasures'].includes(mode)) {
                 throw new Error('Выбран неизвестный режим игры.')
             }
             if (!['random', 'hard', 'monte-carlo', 'monteCarlo', 'expert'].includes(difficulty)) {
                 throw new Error('Выбрана неизвестная сложность компьютера.')
             }
 
-            this.game = createGame(size)
+            this.game = createGame(size, treasures)
             this.id = null
             this.mode = mode
             this.difficulty = difficulty
             this.error = null
         },
-        
+
         handlePointClick(x, y) {
             if (this.game.status !== 'PLAYING') return
             if (!Number.isInteger(x)

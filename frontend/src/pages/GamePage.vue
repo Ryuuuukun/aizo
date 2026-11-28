@@ -35,7 +35,8 @@ const durationOptions = [
 
 const modeOptions = [
     { label: 'Два игрока (локально)', value: 'local' },
-    { label: 'Против бота', value: 'bot' },
+    { label: 'Против компьютера', value: 'computer' },
+    { label: 'С сокровищами (два игрока)', value: 'treasures' },
 ]
 const difficulty = ref('random')
 const isComputerThinking = ref(false)
@@ -55,14 +56,16 @@ onUnmounted(() => {
     if (computerTurnTimer !== null) window.clearTimeout(computerTurnTimer)
 })
 
-function start(mode = 'local') {
+function start(gameMode = mode.value) {
     try {
-        store.newGame({ size: size.value, mode, difficulty: difficulty.value })
+        store.newGame({
+            size: size.value,
+            mode: gameMode,
+            difficulty: difficulty.value,
+            treasures: gameMode === 'treasures',
+        })
         started.value = true
-
-        if (mode.value === 'bot') {
-            maybeBotMove()
-        }
+        scheduleComputerTurn()
     } catch (error) {
         store.error = error.message
     }
@@ -105,6 +108,7 @@ function onOfferEnd() {
 
 function onPointClick(x, y) {
     if (isComputerThinking.value) return
+    if (store.mode === 'computer' && store.currentPlayer === 'R') return
     store.handlePointClick(x, y)
     scheduleComputerTurn()
 }
@@ -119,27 +123,6 @@ function onCloseResult() {
 }
 
 function onTimeout() { store.offerEnd() }
-
-
-// имитация бота
-function maybeBotMove() {
-    setTimeout(() => {
-        if (store.isFinished || store.currentPlayer !== 'R') return
-
-        const size = store.size
-        for (let y = 0; y <= size; y++) {
-            for (let x = 0; x <= size; x++) {
-                if (store.board[y][x] === '.') {
-                    store.handlePointClick(x, y)
-                    setTimeout(() => {
-                        store.handlePointClick(x, y)
-                    }, 300)
-                    return
-                }
-            }
-        }
-    }, 1000)
-}
 
 
 </script>
@@ -161,14 +144,13 @@ function maybeBotMove() {
                 <n-form-item label="Время на игрока">
                     <n-select v-model:value="duration" :options="durationOptions" />
                 </n-form-item>
-                <n-form-item label="Сложность компьютера">
+                <n-form-item v-if="mode === 'computer'" label="Сложность компьютера">
                     <n-select v-model:value="difficulty" :options="difficultyOptions" />
                 </n-form-item>
             </n-form>
             <n-flex justify="end">
-                <n-button @click="start('local')">Начать локальную игру</n-button>
-                <n-button type="primary" @click="start('computer')">
-                    Играть с компьютером
+                <n-button type="primary" @click="start()">
+                    Начать игру
                 </n-button>
             </n-flex>
         </n-card>
@@ -188,6 +170,7 @@ function maybeBotMove() {
                     :size="store.size"
                     :board="store.board"
                     :territories="store.territories"
+                    :treasures="store.treasures"
                     :pending-move="store.pendingMove"
                     :current-player="store.currentPlayer"
                     :status="store.game.status"
@@ -195,7 +178,7 @@ function maybeBotMove() {
                 />
             </div>
             <div class="game-layout__side">
-                <GameSidebar :mode="mode" @timeout="onTimeout" />
+                <GameSidebar :mode="store.mode" @timeout="onTimeout" />
                 <GameControls
                     :can-undo="!isComputerThinking && store.canUndo"
                     :can-end="!isComputerThinking && store.canEndGame"
