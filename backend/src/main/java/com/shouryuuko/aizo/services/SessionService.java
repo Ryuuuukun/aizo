@@ -48,6 +48,8 @@ public class SessionService {
                 .creator(user)
                 .status(Session.GameStatus.WAITING)
                 .createdAt(LocalDateTime.now())
+                .lastActivityAt(LocalDateTime.now())
+                .stateHistory(new ArrayList<>())
                 .build();
 
         return this.sessionMapper.toResponse(this.sessionRepository.save(session));
@@ -73,6 +75,7 @@ public class SessionService {
         session.setOpponent(user);
         session.setStatus(Session.GameStatus.ACTIVE);
         session.setStartedAt(LocalDateTime.now());
+        session.setLastActivityAt(LocalDateTime.now());
 
         var event = DeliveryEvent.builder()
                 .type("SESSION_START")
@@ -92,10 +95,10 @@ public class SessionService {
                 .orElseThrow(() -> new NotFoundException("User was not found"));
         var session = this.sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Session was not found"));
-
         if (!session.getCreator().getId().equals(user.getId()) && !session.getOpponent().getId().equals(user.getId())) {
             throw new SessionConflictException("Only a session participant can propose ending the session.");
         }
+        session.setLastActivityAt(LocalDateTime.now());
 
         if (session.getStatus() == Session.GameStatus.WAITING || session.getStatus() == Session.GameStatus.OFFERING) {
             session.setStatus(Session.GameStatus.FINISHED);
@@ -135,6 +138,7 @@ public class SessionService {
                 .orElseThrow(() -> new NotFoundException("Session was not found"));
 
         session.setCurrentState(newState);
+        session.setLastActivityAt(LocalDateTime.now());
 
         if (session.getStateHistory() == null) {
             session.setStateHistory(new ArrayList<>());

@@ -49,6 +49,8 @@ public class Session {
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;
 
+    private LocalDateTime lastActivityAt;
+
     public enum GameStatus {
         WAITING,
         ACTIVE,
