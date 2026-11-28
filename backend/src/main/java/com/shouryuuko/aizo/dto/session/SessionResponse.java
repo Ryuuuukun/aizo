@@ -29,4 +29,5 @@ public class SessionResponse {
     private Long creatorRemainingMs;
     private Long opponentRemainingMs;
     private Instant serverTime;
+    private Long timeLimit;
 }

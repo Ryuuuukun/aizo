@@ -41,7 +41,7 @@ public class Session {
     private Long creatorTimeLeftMs; 
     private Long opponentTimeLeftMs;
     private Instant turnStartedAt;   
-     
+    private Long timeLimit;
     public enum GameStatus {
         WAITING,
         ACTIVE,

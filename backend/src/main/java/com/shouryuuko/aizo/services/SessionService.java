@@ -42,6 +42,9 @@ public class SessionService {
                 .creator(user)
                 .status(Session.GameStatus.WAITING)
                 .createdAt(LocalDateTime.now())
+                .timeLimit(request.getTimerLimit())
+                .creatorTimeLeftMs(request.getTimerLimit())
+                .creatorTimeLeftMs(request.getTimerLimit())
                 .build();
 
         return this.sessionMapper.toResponse(this.sessionRepository.save(session));
