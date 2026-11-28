@@ -1,10 +1,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage } from 'naive-ui'
-import { NCard, NForm, NFormItem, NInputNumber, NButton, NFlex } from 'naive-ui'
+import { NAlert, NCard, NForm, NFormItem, NInputNumber, NButton, NFlex } from 'naive-ui'
 import { useGameStore } from '@/stores/game'
-import { onMounted} from 'vue'
+import { onMounted } from 'vue'
 
 import GameBoard from '@/components/game/GameBoard.vue'
 import GameSidebar from '@/components/game/GameSidebar.vue'
@@ -12,7 +11,6 @@ import GameControls from '@/components/game/GameControls.vue'
 import EndGameDialog from '@/components/game/EndGameDialog.vue'
 
 const router = useRouter()
-const message = useMessage()
 const store = useGameStore()
 
 const size = ref(8)
@@ -24,16 +22,16 @@ onMounted(() => {
 
 
 function start() {
-    store.newGame({ size: size.value, mode: 'local' })
-    started.value = true
+    try {
+        store.newGame({ size: size.value, mode: 'local' })
+        started.value = true
+    } catch (error) {
+        store.error = error.message
+    }
 }
 
 function onOfferEnd() {
     store.offerEnd()
-}
-
-function onCellClick(x, y) {
-    store.handleCellClick(x, y)
 }
 
 function onPointClick(x, y) {
@@ -52,6 +50,16 @@ function onCloseResult() {
 
 <template>
     <div>
+        <n-alert
+            v-if="store.error"
+            type="error"
+            closable
+            class="game-error"
+            @close="store.clearError()"
+        >
+            {{ store.error }}
+        </n-alert>
+
         <n-card v-if="!started" title="Новая локальная игра" class="setup-card">
             <n-form>
                 <n-form-item label="Размер поля (4–20)">
@@ -67,10 +75,12 @@ function onCloseResult() {
             <div class="game-layout__board">
                 <GameBoard
                     :size="store.size"
-                    @cell-click="onCellClick"
+                    :board="store.board"
+                    :territories="store.territories"
+                    :pending-move="store.pendingMove"
+                    :current-player="store.currentPlayer"
+                    :status="store.game.status"
                     @point-click="onPointClick"
-                    @cancel-wall="store.cancelWall"
-                    @confirm-wall="() => {}"
                 />
             </div>
 
@@ -82,7 +92,7 @@ function onCloseResult() {
                     :wall-building="store.isWallBuilding"
                     @undo="store.undoMove"
                     @cancel-wall="store.cancelWall"
-                    @confirm-wall="() => {}"
+                    @confirm-wall="store.confirmWall"
                     @offer-end="onOfferEnd"
                 />
                 <n-button block quaternary @click="router.push({ name: 'Menu' })">
@@ -103,6 +113,10 @@ function onCloseResult() {
 </template>
 
 <style lang="scss" scoped>
+.game-error {
+    margin-bottom: 16px;
+}
+
 .setup-card {
     max-width: 520px;
     margin: 40px auto;
