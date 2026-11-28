@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia';
+import { useMessage } from 'naive-ui';
 
 import { socket } from "@/api/websocket.js";
 import client from "@/api/axios.js";
@@ -9,15 +9,26 @@ export function useSession() {
     const session = ref(null);
     const subscribe = null;
 
+    const message = useMessage();
+
     async function load(session) {
+        clear();
         const response = await client.get(`${API_SESSION_URL}/${session}`);
         _initSession(response.data);   
+    }
+
+    async function join(session) {
+        clear();
+        const response = await client.post(`${API_SESSION_URL}/${session}`);
+        _initSession(response.data);
     }
 
     async function offer() {
         if (session.value !== null) {
             const response = await client.get(`${API_SESSION_URL}/${session.value.id}/offer`);
             session.value = response.data;
+        } else {
+            message.error('Вы не подключены к сессии');
         }
     }
 
@@ -25,6 +36,8 @@ export function useSession() {
         if (session.value !== null) {
             const response = await client.post(`${API_SESSION_URL}/${session.value.id}/move`, request);
             session.value = response.data;
+        } else {
+            message.error('Вы не подключены к сесии');
         }
     }
 
