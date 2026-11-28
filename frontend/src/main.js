@@ -15,7 +15,7 @@ app.use(pinia);
 app.use(naive)
 
 const authStore = useAuthStore();
-await authStore.initAuth();
+void authStore.initAuth();
 
 app.use(router);
 app.mount('#app');

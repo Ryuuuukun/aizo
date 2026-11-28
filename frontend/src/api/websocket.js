@@ -32,8 +32,8 @@ class WebSocketService {
             connectionTimeout: 10000,
             onConnect: () => {
                 this.connected = true;
-                this.subscriptions.forEach((callback, topic) =>
-                    this.subscribe(topic, callback));
+                this.subscriptions.forEach((subscription, topic) =>
+                    this._subscribe(topic, subscription));
             },
             onWebSocketClose: () => {
                 this.connected = false
@@ -62,18 +62,37 @@ class WebSocketService {
         this.connected = false;
         if (this.client) {
             await this.client.deactivate();
+            this.subscriptions.forEach(subscription => {
+                subscription.active = false;
+                subscription.subscription?.unsubscribe();
+            });
             this.subscriptions.clear();
             this.client = null;
         }
     }
 
     subscribe(topic, callback) {
-        this.subscriptions.set(topic, callback);
-        if (this.connected) {
-            console.log('subscribe');
-            return this.client.subscribe(topic,
-                message => callback(message));
-        }
+        const subscription = { callback, active: true, subscription: null };
+        this.subscriptions.set(topic, subscription);
+        if (this.connected) this._subscribe(topic, subscription);
+
+        return {
+            unsubscribe: () => {
+                if (!subscription.active) return;
+                subscription.active = false;
+                subscription.subscription?.unsubscribe();
+                if (this.subscriptions.get(topic) === subscription) {
+                    this.subscriptions.delete(topic);
+                }
+            },
+        };
+    }
+
+    _subscribe(topic, subscription) {
+        if (!subscription.active) return;
+        subscription.subscription = this.client.subscribe(topic, message => {
+            if (subscription.active) subscription.callback(message);
+        });
     }
 }
 

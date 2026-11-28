@@ -1,6 +1,7 @@
 package com.shouryuuko.aizo.dto.session;
 
 import com.shouryuuko.aizo.dto.user.UserResponse;
+import com.shouryuuko.aizo.entity.Board;
 import com.shouryuuko.aizo.entity.Session;
 import lombok.*;
 
@@ -21,6 +22,7 @@ public class SessionResponse {
     private UserResponse creator;
     private UserResponse opponent;
     private UserResponse turnPlayer;
+    private Board board;
 
     private Session.GameStatus status;
 

@@ -35,7 +35,7 @@ public class CurrentUserProvider {
         if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt
                 && jwt.getSubject() != null && !jwt.getSubject().isBlank()) {
 
-            return userRepository.findByKeycloak(UUID.fromString(jwt.getSubject()))
+            return userRepository.findFirstByKeycloakOrderByIdAsc(UUID.fromString(jwt.getSubject()))
                     .orElseThrow(() -> new NotFoundException("User was not found."));
         }
 

@@ -5,6 +5,7 @@ defineProps({
     canUndo:      { type: Boolean, default: false },
     canEnd:       { type: Boolean, default: false },
     wallBuilding: { type: Boolean, default: false },
+    endLabel:     { type: String, default: 'Завершить игру' },
 })
 
 defineEmits(['undo', 'cancel-wall', 'confirm-wall', 'offer-end'])
@@ -26,7 +27,7 @@ defineEmits(['undo', 'cancel-wall', 'confirm-wall', 'offer-end'])
                 Отменить ход
             </n-button>
             <n-button type="error" block :disabled="!canEnd" @click="$emit('offer-end')">
-                Завершить игру
+                {{ endLabel }}
             </n-button>
         </template>
     </n-flex>

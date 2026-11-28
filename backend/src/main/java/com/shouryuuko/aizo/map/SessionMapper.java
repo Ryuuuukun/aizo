@@ -4,6 +4,7 @@ import com.shouryuuko.aizo.dto.session.SessionResponse;
 import com.shouryuuko.aizo.entity.Session;
 
 import org.mapstruct.AfterMapping;
+import org.mapstruct.Mapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
@@ -16,6 +17,7 @@ import java.util.List;
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
         uses = { UserMapper.class })
 public interface SessionMapper {
+    @Mapping(target = "board", source = "state.board")
     SessionResponse toResponse(Session session);
     List<SessionResponse> toResponses(List<Session> sessions);
 

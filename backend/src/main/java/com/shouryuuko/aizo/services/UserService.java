@@ -27,7 +27,7 @@ public class UserService {
             throw new IllegalStateException("The subject of the JWT token cannot be empty.");
         }
 
-        userRepository.findByKeycloak(UUID.fromString(subject))
+        userRepository.findFirstByKeycloakOrderByIdAsc(UUID.fromString(subject))
                 .ifPresentOrElse(
                         user -> {
                             if (!user.getUsername().equals(username)) {

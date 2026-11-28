@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NAlert, NCard, NForm, NFormItem, NInputNumber, NSelect, NButton, NFlex } from 'naive-ui'
 import {
     NAlert,
     NButton,
@@ -37,6 +36,7 @@ const durationOptions = [
 const modeOptions = [
     { label: 'Два игрока (локально)', value: 'local' },
     { label: 'Против бота', value: 'bot' },
+]
 const difficulty = ref('random')
 const isComputerThinking = ref(false)
 let computerTurnTimer = null
@@ -68,17 +68,6 @@ function start(mode = 'local') {
     }
 }
 
-function onOfferEnd() { store.offerEnd() }
-function onPointClick(x, y) {
-    if (mode.value === 'bot' && store.currentPlayer === 'R') return
-    
-    store.handlePointClick(x, y)
-    
-    if (mode.value === 'bot' && store.currentPlayer === 'R' && !store.isFinished) {
-        maybeBotMove()
-    }
-}
-function onAgain() { start() }
 function scheduleComputerTurn() {
     if (store.mode !== 'computer'
         || store.currentPlayer !== 'R'
@@ -171,6 +160,7 @@ function maybeBotMove() {
                 </n-form-item>
                 <n-form-item label="Время на игрока">
                     <n-select v-model:value="duration" :options="durationOptions" />
+                </n-form-item>
                 <n-form-item label="Сложность компьютера">
                     <n-select v-model:value="difficulty" :options="difficultyOptions" />
                 </n-form-item>
