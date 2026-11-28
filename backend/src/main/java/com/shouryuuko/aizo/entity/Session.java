@@ -3,6 +3,7 @@ package com.shouryuuko.aizo.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -41,6 +42,10 @@ public class Session {
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;
 
+    private Long creatorTimeLeftMs; 
+    private Long opponentTimeLeftMs;
+    private Instant turnStartedAt;   
+    private Long timeLimit;
     public enum GameStatus {
         WAITING,
         ACTIVE,
