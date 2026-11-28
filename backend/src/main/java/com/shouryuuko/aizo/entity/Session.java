@@ -2,9 +2,13 @@ package com.shouryuuko.aizo.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -32,6 +36,14 @@ public class Session {
     @ManyToOne
     @JoinColumn(name = "current_player_id")
     private User turnPlayer;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "current_state")
+    private GameState currentState;
+
+    @JDBCTypeCode(SqlTypes.JSON)
+    @Column(name = "state_history")
+    private List<GameState> stateHistory = new ArrayList<>();
 
     private LocalDateTime createdAt;
     private LocalDateTime startedAt;
