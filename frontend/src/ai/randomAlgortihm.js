@@ -1,4 +1,11 @@
-import { validateBoundary } from '../game/gameState.js';
+import {
+    beginBoundary,
+    extendBoundary,
+    finishPointTurn,
+    getScores,
+    placePoint,
+    validateBoundary
+} from '../game/gameState.js';
 
 const pointKey = ({ x, y }) => `${x},${y}`;
 
@@ -111,7 +118,9 @@ export function findLegalBoundary(state, color, requiredPoint = null) {
 
 export function chooseBoundary(boundaries, difficulty) {
     if (boundaries.length === 0) return null;
-    if (difficulty !== 'hard') return chooseRandom(boundaries);
+    if (!['hard', 'monte-carlo', 'monteCarlo', 'expert'].includes(difficulty)) {
+        return chooseRandom(boundaries);
+    }
 
     return boundaries.reduce((best, boundary) =>
         boundaryArea(boundary) > boundaryArea(best) ? boundary : best);
@@ -172,3 +181,277 @@ export function hardDecision(board, color) {
         .filter(candidate => candidate.score === bestScore)
         .map(candidate => candidate.point));
 }
+
+function completeBoundary(state, boundary) {
+    let orderedBoundary = boundary;
+    if (state.pendingMove?.kind === 'point') {
+        const startIndex = boundary.findIndex(point =>
+            point.x === state.pendingMove.point.x
+            && point.y === state.pendingMove.point.y
+        );
+        if (startIndex >= 0) {
+            orderedBoundary = [
+                ...boundary.slice(startIndex),
+                ...boundary.slice(0, startIndex)
+            ];
+        }
+    }
+
+    let next = beginBoundary(state, orderedBoundary[0].x, orderedBoundary[0].y);
+    for (const point of orderedBoundary.slice(1)) {
+        next = extendBoundary(next, point.x, point.y);
+    }
+    return extendBoundary(next, orderedBoundary[0].x, orderedBoundary[0].y);
+}
+
+function copyState(state) {
+    return {
+        ...state,
+        board: state.board.slice(),
+        territories: state.territories.map(territory => ({
+            ...territory,
+            boundary: territory.boundary.map(point => ({ ...point }))
+        })),
+        pendingMove: state.pendingMove ? {
+            ...state.pendingMove,
+            path: state.pendingMove.path?.map(point => ({ ...point }))
+        } : null
+    };
+}
+
+function getActions(state) {
+    if (state.status !== 'PLAYING') return [];
+
+    if (state.pendingMove?.kind === 'point') {
+        const point = state.pendingMove.point;
+        const boundaries = findLegalBoundary(state, state.currentPlayer, point)
+            .slice(0, 6);
+        return [
+            ...boundaries.map(boundary => ({ type: 'boundary', boundary })),
+            { type: 'finish' }
+        ];
+    }
+
+    const existingBoundaries = findLegalBoundary(state, state.currentPlayer).slice(0, 6);
+    const actions = existingBoundaries.map(boundary => ({
+        type: 'boundary',
+        boundary
+    }));
+
+    let emptyPoints = [];
+    try {
+        emptyPoints = getEmptyPoints(state.board, state.currentPlayer);
+    } catch {
+        return actions;
+    }
+    return [
+        ...actions,
+        ...emptyPoints.map(point => ({ type: 'point', point }))
+    ];
+}
+
+function applyAction(state, action) {
+    if (action.type === 'boundary') {
+        return completeBoundary(state, action.boundary);
+    }
+    if (action.type === 'finish') {
+        return finishPointTurn(state);
+    }
+    if (action.type === 'point') {
+        return placePoint(state, action.point.x, action.point.y);
+    }
+    return state;
+}
+
+function rolloutAction(state) {
+    const actions = getActions(state);
+    if (actions.length === 0) return null;
+
+    const boundaries = actions.filter(action => action.type === 'boundary');
+    if (boundaries.length > 0) {
+        if (state.pendingMove?.kind === 'point' && Math.random() < 0.7) {
+            return boundaries.reduce((best, action) =>
+                boundaryArea(action.boundary) > boundaryArea(best.boundary) ? action : best
+            );
+        }
+        if (!state.pendingMove && Math.random() < 0.75) {
+            return boundaries.reduce((best, action) =>
+                boundaryArea(action.boundary) > boundaryArea(best.boundary) ? action : best
+            );
+        }
+    }
+
+    const points = actions.filter(action => action.type === 'point');
+    if (points.length > 0) {
+        if (Math.random() < 0.45) {
+            let best = null;
+            let bestScore = -Infinity;
+            const candidates = points.length > 4
+                ? [...points].sort(() => Math.random() - 0.5).slice(0, 4)
+                : points;
+            for (const action of candidates) {
+                const placed = placePoint(copyState(state), action.point.x, action.point.y);
+                const closing = findLegalBoundary(placed, state.currentPlayer, action.point);
+                let ownNeighbors = 0;
+                for (let y = Math.max(0, action.point.y - 1); y <= Math.min(state.size, action.point.y + 1); y += 1) {
+                    for (let x = Math.max(0, action.point.x - 1); x <= Math.min(state.size, action.point.x + 1); x += 1) {
+                        if (x !== action.point.x || y !== action.point.y) {
+                            if (state.board[y][x] === state.currentPlayer) ownNeighbors += 1;
+                        }
+                    }
+                }
+                const score = closing.reduce(
+                    (area, boundary) => Math.max(area, boundaryArea(boundary)),
+                    0
+                ) * 20 + ownNeighbors * 2;
+                if (score > bestScore) {
+                    best = action;
+                    bestScore = score;
+                }
+            }
+            return best ?? chooseRandom(points);
+        }
+        return chooseRandom(points);
+    }
+
+    const finishes = actions.filter(action => action.type === 'finish');
+    if (finishes.length > 0) return finishes[0];
+    return chooseRandom(actions);
+}
+
+function terminalReward(state, rootColor) {
+    const scores = getScores(state);
+    if (state.status === 'FINISHED') {
+        const opponent = rootColor === 'B' ? 'R' : 'B';
+        if (scores[rootColor] > scores[opponent]) return 1000 + scores[rootColor] - scores[opponent];
+        if (scores[rootColor] < scores[opponent]) return -1000 + scores[rootColor] - scores[opponent];
+        return 0;
+    }
+    const opponent = rootColor === 'B' ? 'R' : 'B';
+    return (scores[rootColor] - scores[opponent]) * 100
+        + [...state.board.join('')].filter(point => point === rootColor).length
+        - [...state.board.join('')].filter(point => point === opponent).length;
+}
+
+function cloneAndRollout(startState, rootColor, maxMoves) {
+    let state = copyState(startState);
+
+    for (let move = 0; move < maxMoves && state.status === 'PLAYING'; move += 1) {
+        const action = rolloutAction(state);
+        if (!action) break;
+        state = applyAction(state, action);
+    }
+    return terminalReward(state, rootColor);
+}
+
+export function monteCarloDecision(stateOrBoard, color, iterations = null) {
+    const state = Array.isArray(stateOrBoard)
+        ? {
+            size: stateOrBoard.length - 1,
+            board: stateOrBoard.slice(),
+            territories: [],
+            currentPlayer: color,
+            boundaryFollowUpUsed: false,
+            status: 'PLAYING',
+            pendingMove: null,
+            nextTerritoryId: 1,
+            winner: null
+        }
+        : copyState(stateOrBoard);
+
+    const root = {
+        state,
+        parent: null,
+        action: null,
+        children: [],
+        untriedActions: getActions(state),
+        visits: 0,
+        value: 0
+    };
+
+    if (root.untriedActions.length === 0) {
+        throw new Error('There are no legal moves to search.');
+    }
+    if (root.untriedActions.length === 1) {
+        const onlyAction = root.untriedActions[0];
+        return onlyAction.point ?? null;
+    }
+
+    const emptyCount = getEmptyPoints(state.board, color).length;
+    const iterationCount = iterations ?? Math.min(400, Math.max(160, emptyCount * 4));
+    const maxMoves = Math.min(emptyCount + 20, 80);
+
+    for (let iteration = 0; iteration < iterationCount; iteration += 1) {
+        let node = root;
+
+        while (node.untriedActions.length === 0 && node.children.length > 0) {
+            const logVisits = Math.log(Math.max(1, node.visits));
+            node = node.children.reduce((best, candidate) => {
+                if (candidate.visits === 0) return candidate;
+                if (best.visits === 0) return best;
+                const candidateMean = candidate.value / candidate.visits;
+                const mean = node.state.currentPlayer === color
+                    ? candidateMean
+                    : -candidateMean;
+                const bestMean = best.value / best.visits;
+                const bestCurrentMean = node.state.currentPlayer === color
+                    ? bestMean
+                    : -bestMean;
+                const candidateScore = mean
+                    + Math.sqrt(2 * logVisits / candidate.visits);
+                const bestScore = bestCurrentMean
+                    + Math.sqrt(2 * logVisits / Math.max(1, best.visits));
+                return candidateScore > bestScore ? candidate : best;
+            });
+        }
+
+        if (node.untriedActions.length > 0) {
+            const actionIndex = Math.floor(Math.random() * node.untriedActions.length);
+            const action = node.untriedActions.splice(actionIndex, 1)[0];
+            const childState = copyState(applyAction(copyState(node.state), action));
+            const child = {
+                state: childState,
+                parent: node,
+                action,
+                children: [],
+                untriedActions: getActions(childState),
+                visits: 0,
+                value: 0
+            };
+            node.children.push(child);
+            node = child;
+        }
+
+        const reward = cloneAndRollout(node.state, color, maxMoves);
+        while (node) {
+            node.visits += 1;
+            node.value += reward;
+            node = node.parent;
+        }
+    }
+
+    if (root.children.length === 0) {
+        const pointActions = root.untriedActions.filter(action => action.type === 'point');
+        return pointActions.length > 0 ? chooseRandom(pointActions).point : null;
+    }
+
+    const best = root.children
+        .filter(child => child.action.type === 'point')
+        .reduce((candidate, current) => {
+            if (!candidate) return current;
+            if (current.visits !== candidate.visits) {
+                return current.visits > candidate.visits ? current : candidate;
+            }
+            return current.value / current.visits > candidate.value / candidate.visits
+                ? current
+                : candidate;
+        }, null);
+
+    if (best) return best.action.point;
+    const pointActions = root.untriedActions.filter(action => action.type === 'point');
+    if (pointActions.length > 0) return chooseRandom(pointActions).point;
+    return chooseRandom(getEmptyPoints(state.board, color));
+}
+
+export const monteCarloTreeSearchDecision = monteCarloDecision;
+export const expertDecision = monteCarloDecision;
