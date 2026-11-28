@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import client from '@/api/axios.js';
+import { socket } from '@/api/websocket.js';
 
 export const useLobbyStore = defineStore('lobby', {
     state: () => ({

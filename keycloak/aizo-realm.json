@@ -352,15 +352,15 @@
       "clientId": "aizo frontend",
       "name": "Aizo Frontend",
       "description": "",
-      "rootUrl": "http://localhost:5100",
-      "adminUrl": "http://localhost:5100",
-      "baseUrl": "http://localhost:5100",
+      "rootUrl": "http://localhost",
+      "adminUrl": "http://localhost",
+      "baseUrl": "http://localhost",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://localhost:5100/*"
+        "http://localhost/*"
       ],
       "webOrigins": [
         "+"
@@ -381,7 +381,7 @@
         "backchannel.logout.session.required": "true",
         "standard.token.exchange.enabled": "false",
         "oauth2.jwt.authorization.grant.enabled": "false",
-        "post.logout.redirect.uris": "http://localhost:5100/*",
+        "post.logout.redirect.uris": "http://localhost/*",
         "oauth2.device.authorization.grant.enabled": "false",
         "pkce.code.challenge.method": "S256",
         "backchannel.logout.revoke.offline.tokens": "false",

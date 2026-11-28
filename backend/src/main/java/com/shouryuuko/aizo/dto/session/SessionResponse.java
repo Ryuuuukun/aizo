@@ -16,6 +16,8 @@ import java.util.UUID;
 public class SessionResponse {
     private UUID id;
 
+    private String name;
+
     private UserResponse creator;
     private UserResponse opponent;
     private UserResponse turnPlayer;

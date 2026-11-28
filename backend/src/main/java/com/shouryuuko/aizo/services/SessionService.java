@@ -4,15 +4,21 @@ import com.shouryuuko.aizo.delivery.DeliveryEvent;
 import com.shouryuuko.aizo.delivery.DeliveryEventPublisher;
 import com.shouryuuko.aizo.delivery.DeliveryEventTarget;
 import com.shouryuuko.aizo.dto.session.SessionCreateRequest;
+import com.shouryuuko.aizo.dto.session.SessionMoveRequest;
 import com.shouryuuko.aizo.dto.session.SessionResponse;
+import com.shouryuuko.aizo.entity.Board;
+import com.shouryuuko.aizo.entity.GameState;
 import com.shouryuuko.aizo.entity.Session;
 import com.shouryuuko.aizo.exception.NotFoundException;
+import com.shouryuuko.aizo.exception.SessionBadRequestException;
 import com.shouryuuko.aizo.exception.SessionConflictException;
 import com.shouryuuko.aizo.exception.SessionFullException;
 import com.shouryuuko.aizo.map.SessionMapper;
 import com.shouryuuko.aizo.repository.SessionRepository;
 import com.shouryuuko.aizo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,12 +40,15 @@ public class SessionService {
     public SessionResponse createSession(UUID userId, SessionCreateRequest request) {
         var user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found."));
-        if (this.sessionRepository.hasUnfinishedSessions(user)) {
-            throw new SessionConflictException("The user cannot participate in more than one active session.");
-        }
 
         var session = Session.builder()
                 .creator(user)
+                .name(request.getName())
+                .state(GameState.builder()
+                        .board(Board.builder()
+                                .size(request.getSize())
+                                .build())
+                        .build())
                 .status(Session.GameStatus.WAITING)
                 .createdAt(LocalDateTime.now())
                 .timeLimit(request.getTimerLimit())
@@ -54,10 +63,6 @@ public class SessionService {
     public SessionResponse joinSession(UUID userId, UUID sessionId) {
         var user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found"));
-        if (this.sessionRepository.hasUnfinishedSessions(user)) {
-            throw new SessionConflictException("The user cannot participate in more than one active session.");
-        }
-
         var session = this.sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Session was not found"));
 
@@ -96,6 +101,7 @@ public class SessionService {
 
         if (session.getStatus() == Session.GameStatus.WAITING || session.getStatus() == Session.GameStatus.OFFERING) {
             session.setStatus(Session.GameStatus.FINISHED);
+            session.setFinishedAt(LocalDateTime.now());
 
             var event = DeliveryEvent.builder()
                     .type("SESSION_FINISHED")
@@ -127,17 +133,74 @@ public class SessionService {
     }
 
     @Transactional
+    public SessionResponse makeMove(UUID userId, UUID sessionId, SessionMoveRequest request) {
+        var user = this.userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User was not found."));
+        var session = this.sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Session was not found."));
+        if (session.getStatus() == Session.GameStatus.FINISHED) {
+            throw new SessionBadRequestException("Session is finished.");
+        }
+
+        if (!session.getOpponent().getId().equals(user.getId()) && !session.getCreator().getId().equals(user.getId())) {
+            throw new SessionBadRequestException("Only member session can make move.");
+        }
+
+        if (!session.getState().getTurn().getId().equals(user.getId())) {
+            throw new SessionBadRequestException("Not your turn");
+        }
+
+        session.getState().setBoard(request.getBoard());
+        var state = session.getState();
+        state.setBoard(request.getBoard());
+        state.setLastTurn(state.getTurn());
+        if (session.getCreator().getId().equals(state.getTurn().getId())) {
+            state.setTurn(session.getOpponent());
+        } else {
+            state.setTurn(session.getCreator());
+        }
+
+        var response = this.sessionMapper.toResponse(this.sessionRepository.save(session));
+        var event = DeliveryEvent.builder()
+                .type("SESSION_CAN_MOVE")
+                .payload(response)
+                .build();
+        if (session.getCreator().getId().equals(state.getTurn().getId())) {
+            eventPublisher.publish(
+                    event, DeliveryEventTarget.user(session.getCreator().getKeycloak().toString(), "/queue/session"));
+        } else {
+            eventPublisher.publish(
+                    event, DeliveryEventTarget.user(session.getOpponent().getKeycloak().toString(), "/queue/session")
+            );
+        }
+
+        return response;
+    }
+
+    @Transactional
     public List<SessionResponse> getAllSessions() {
         return this.sessionMapper.toResponses(this.sessionRepository.findAll());
     }
 
     @Transactional
-    public SessionResponse getActiveSession(UUID userId) {
+    public SessionResponse getSession(UUID sessionId) {
+        return this.sessionRepository.findById(sessionId)
+                .map(this.sessionMapper::toResponse)
+                .orElseThrow(() -> new NotFoundException("Session was not found"));
+    }
+
+    @Transactional
+    public Page<SessionResponse> getWaitingSessions(Pageable pageable) {
+        return this.sessionRepository.findAllByStatus(Session.GameStatus.WAITING, pageable)
+                .map(this.sessionMapper::toResponse);
+    }
+
+    @Transactional
+    public List<SessionResponse> getActiveSession(UUID userId) {
         var user = this.userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User was not found."));
-        var session = this.sessionRepository.findUnfinishedSession(user)
-                .orElseThrow(() -> new NotFoundException("Session was not found."));
+        var sessions = this.sessionRepository.findUnfinishedSessions(user);
 
-        return this.sessionMapper.toResponse(session);
+        return this.sessionMapper.toResponses(sessions);
     }
 }

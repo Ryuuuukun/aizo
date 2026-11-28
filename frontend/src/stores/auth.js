@@ -13,7 +13,7 @@ export const useAuthStore = defineStore('auth', {
     actions: {
         async initAuth() {
             const instance = new Keycloak({
-                url: 'http://localhost:8070',
+                url: `${window.location.origin}/auth`,
                 realm: 'aizo',
                 clientId: 'aizo frontend'
             });
@@ -32,8 +32,8 @@ export const useAuthStore = defineStore('auth', {
 
             try {
                 const authenticated = await instance.init({
-                    // onLoad: 'check-sso',
-                    // silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+                    onLoad: 'check-sso',
+                    silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
                     checkLoginIframe: false
                 });
 
@@ -42,7 +42,13 @@ export const useAuthStore = defineStore('auth', {
 
                 if (authenticated) {
                     this.token = instance.token;
-                    this.user = await instance.loadUserProfile();
+                    this.user = {
+                        id: instance.subject,
+                        username: instance.tokenParsed?.preferred_username,
+                        email: instance.tokenParsed?.email,
+                        firstName: instance.tokenParsed?.given_name,
+                        lastName: instance.tokenParsed?.family_name
+                    };
                 }
             } catch (error) {
                 console.error('Exception initialization Keycloak:', error);

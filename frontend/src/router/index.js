@@ -55,11 +55,12 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-    const authStore = useAuthStore()
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-        authStore.login({ redirectUri: window.location.origin + to.fullPath })
-        return false
-    }
+    // const authStore = useAuthStore();
+
+    // if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    //     authStore.login({ redirectUri: window.location.origin + to.fullPath })
+    //     return false
+    // }
 })
 
 export default router

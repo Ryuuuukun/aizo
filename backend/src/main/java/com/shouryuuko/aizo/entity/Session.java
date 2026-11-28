@@ -19,6 +19,8 @@ public class Session {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    private String name;
+
     @ManyToOne
     @JoinColumn(name = "creator_id", nullable = false)
     private User creator;
@@ -29,6 +31,10 @@ public class Session {
 
     @Enumerated(EnumType.STRING)
     private GameStatus status;
+
+    @JoinColumn(name = "state_id")
+    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private GameState state;
 
     @ManyToOne
     @JoinColumn(name = "current_player_id")
