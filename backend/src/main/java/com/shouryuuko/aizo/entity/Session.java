@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -35,6 +37,11 @@ public class Session {
     @JoinColumn(name = "state_id")
     @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private GameState state;
+
+    @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinColumn(name = "session_id")
+    @Builder.Default
+    private Set<GameState> history = new HashSet<>();
 
     @ManyToOne
     @JoinColumn(name = "current_player_id")
