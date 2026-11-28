@@ -62,6 +62,7 @@ export function createGame(size = 8) {
         board: Array.from({ length: size + 1 }, () => '.'.repeat(size + 1)),
         territories: [],
         currentPlayer: 'B',
+        boundaryFollowUpUsed: false,
         status: 'PLAYING',
         pendingMove: null,
         nextTerritoryId: 1,
@@ -98,6 +99,7 @@ export function finishPointTurn(state) {
     return finishIfNoMoves({
         ...state,
         currentPlayer: state.currentPlayer === 'B' ? 'R' : 'B',
+        boundaryFollowUpUsed: false,
         pendingMove: null
     });
 }
@@ -174,10 +176,15 @@ function captureTerritory(state, boundary, newPoint) {
         }
     }
 
+    const boundaryFollowUpUsed = state.boundaryFollowUpUsed ?? false;
     return finishIfNoMoves({
         ...state,
         board: board.map(row => row.join('')),
         territories,
+        currentPlayer: boundaryFollowUpUsed
+            ? (state.currentPlayer === 'B' ? 'R' : 'B')
+            : state.currentPlayer,
+        boundaryFollowUpUsed: !boundaryFollowUpUsed,
         pendingMove: null,
         nextTerritoryId: state.nextTerritoryId + 1,
         capturedTerritoryIds: captured.map(territory => territory.id),
