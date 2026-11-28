@@ -30,6 +30,8 @@ public class SessionService {
 
     private final DeliveryEventPublisher eventPublisher;
 
+    private final ObjectMapper objectMapper;
+
     @Transactional
     public SessionResponse createSession(UUID userId, SessionCreateRequest request) {
         var user = this.userRepository.findById(userId)
@@ -121,6 +123,22 @@ public class SessionService {
         }
 
         return this.sessionMapper.toResponse(this.sessionRepository.save(session));
+    }
+
+    @Transactional
+    public void saveState(UUID sessionId, GameState newState) {
+        var session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Session was not found"));
+
+        session.setCurrentState(newState);
+
+        if (session.getStateHistory() == null) {
+            session.setStateHistory(new ArrayList<>());;
+        });
+
+        session.getStateHistory().add(deepCopy(newState))
+
+        sessionRepository.save(session);
     }
 
     @Transactional
