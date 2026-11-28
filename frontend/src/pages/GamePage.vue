@@ -35,8 +35,7 @@ const durationOptions = [
 
 const modeOptions = [
     { label: 'Два игрока (локально)', value: 'local' },
-    { label: 'Против компьютера', value: 'computer' },
-    { label: 'С сокровищами (два игрока)', value: 'treasures' },
+    { label: 'Против бота', value: 'bot' },
 ]
 const difficulty = ref('random')
 const isComputerThinking = ref(false)
@@ -56,7 +55,7 @@ onUnmounted(() => {
     if (computerTurnTimer !== null) window.clearTimeout(computerTurnTimer)
 })
 
-function start(gameMode = mode.value) {
+function start(gameMode = 'local') {
     try {
         store.newGame({
             size: size.value,
@@ -144,13 +143,17 @@ function onTimeout() { store.offerEnd() }
                 <n-form-item label="Время на игрока">
                     <n-select v-model:value="duration" :options="durationOptions" />
                 </n-form-item>
-                <n-form-item v-if="mode === 'computer'" label="Сложность компьютера">
+                <n-form-item label="Сложность компьютера">
                     <n-select v-model:value="difficulty" :options="difficultyOptions" />
                 </n-form-item>
             </n-form>
             <n-flex justify="end">
-                <n-button type="primary" @click="start()">
-                    Начать игру
+                <n-button @click="start('local')">Начать локальную игру</n-button>
+                <n-button @click="start('computer')">
+                    Играть с компьютером
+                </n-button>
+                <n-button type="primary" @click="start('treasures')">
+                    Играть с сокровищами
                 </n-button>
             </n-flex>
         </n-card>
