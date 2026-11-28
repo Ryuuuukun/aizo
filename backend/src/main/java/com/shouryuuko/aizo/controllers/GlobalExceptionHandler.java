@@ -1,6 +1,8 @@
 package com.shouryuuko.aizo.controllers;
 
 import com.shouryuuko.aizo.exception.NotFoundException;
+import com.shouryuuko.aizo.exception.SessionConflictException;
+import com.shouryuuko.aizo.exception.SessionFullException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,6 +19,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException e) {
         return build(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(SessionFullException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionFull(SessionFullException e) {
+        return build(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(SessionConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionConflict(SessionConflictException e) {
+        return build(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
