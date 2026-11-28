@@ -11,4 +11,5 @@ import lombok.Setter;
 @RequiredArgsConstructor
 public class SessionCreateRequest {
     private final Integer size;
+    private final Long timerLimit;
 }

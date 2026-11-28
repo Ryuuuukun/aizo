@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import RatingPanel from '@/components/menu/RatingPanel.vue'
 
 const cards = [
     {
@@ -54,9 +55,15 @@ const cards = [
                     <div class="menu__card-emoji">{{ card.emoji }}</div>
                     <h2 class="menu__card-title">{{ card.title }}</h2>
                     <p class="menu__card-desc">{{ card.description }}</p>
+
+                    
                 </div>
             </template>
         </section>
+        <section class="menu__rating">
+            <RatingPanel />
+        </section>
+
     </div>
 </template>
 
@@ -176,5 +183,9 @@ const cards = [
     line-height: 1.8;
 
     li + li { margin-top: 6px; }
+}
+
+.menu__rating {
+    margin-top: 48px;
 }
 </style>

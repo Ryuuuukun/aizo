@@ -52,6 +52,7 @@ export const useGameStore = defineStore('game', {
         difficulty: 'random',
         game: createGame(8),
         error: null,
+        turnDuration: 300,
     }),
 
     getters: {
@@ -100,7 +101,7 @@ export const useGameStore = defineStore('game', {
             this.difficulty = difficulty
             this.error = null
         },
-
+        
         handlePointClick(x, y) {
             if (this.game.status !== 'PLAYING') return
             if (!Number.isInteger(x)

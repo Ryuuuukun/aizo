@@ -19,7 +19,7 @@ const movePath = computed(() => props.pendingMove?.kind === 'boundary'
     : [])
 const hint = computed(() => {
     if (props.pendingMove?.kind === 'point') {
-        return 'Нажмите на точку ещё раз, чтобы передать ход, или выберите соседнюю свою точку для стены.'
+        return 'Нажмите на точку ещё раз, чтобы подтвердить ход, или выберите соседнюю свою точку для стены.'
     }
     if (props.pendingMove?.kind === 'boundary') {
         return 'Продолжайте стену по соседним своим точкам и замкните её кнопкой или нажатием на начало.'
@@ -47,6 +47,13 @@ function pointLabel(color, x, y) {
     if (color === '.') return `Точка ${x}, ${y}, свободна`
     return `Точка ${x}, ${y}, ${color === 'B' ? 'чёрная' : 'красная'}`
 }
+
+function isPendingPoint(x, y) {
+    return props.pendingMove?.kind === 'point' 
+        && props.pendingMove.point.x === x 
+        && props.pendingMove.point.y === y;
+}   
+
 </script>
 
 <template>
@@ -99,6 +106,7 @@ function pointLabel(color, x, y) {
                     :class="[
                         'game-board__point',
                         color === '.' ? 'game-board__point--empty' : `game-board__point--${color}`,
+                        isPendingPoint(x, y) ? 'game-board__point--pending' : ''
                     ]"
                     :tabindex="status === 'PLAYING' ? 0 : -1"
                     role="button"
@@ -180,5 +188,19 @@ function pointLabel(color, x, y) {
 
 .game-board__point--R {
     fill: #d32f2f;
+}
+
+.game-board__point--pending {
+    fill-opacity: 0.4;
+    stroke: #3574c8;
+    stroke-width: 2;
+    stroke-dasharray: 4 2;
+    animation: pulse-point 1.5s infinite;
+}
+
+@keyframes pulse-point {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
 }
 </style>
