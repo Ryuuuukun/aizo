@@ -1,67 +1,66 @@
-import { useMessage } from 'naive-ui';
-
-import { socket } from "@/api/websocket.js";
-import client from "@/api/axios.js";
-
-const API_SESSION_URL = '/api/session';
+import { onScopeDispose, readonly, ref } from 'vue'
+import { useMessage } from 'naive-ui'
+import { useSessionSevice } from '@/api/services/session'
+import { socket } from '@/api/websocket.js'
 
 export function useSession() {
-    const session = ref(null);
-    const subscribe = null;
-    const listeners = new Map();
+    const session = ref(null)
+    const loading = ref(false)
+    const message = useMessage()
+    const service = useSessionSevice()
+    let subscription = null
+    let sessionId = null
 
-    const message = useMessage();
-
-    async function load(session) {
-        clear();
-        const response = await client.get(`${API_SESSION_URL}/${session}`);
-        _initSession(response.data);   
+    function applySession(nextSession) {
+        if (nextSession?.id === sessionId) session.value = nextSession
     }
 
-    async function join(session) {
-        clear();
-        const response = await client.post(`${API_SESSION_URL}/${session}`);
-        _initSession(response.data);
+    async function connect(id) {
+        clear()
+        sessionId = id
+        loading.value = true
+        try {
+            await socket.connect()
+            subscription = socket.subscribe('/user/queue/session', event => {
+                try {
+                    const response = JSON.parse(event.body)
+                    applySession(response.payload)
+                } catch (error) {
+                    console.error('Unable to process session update', error)
+                    message.error('Не удалось обработать обновление игры')
+                }
+            })
+            applySession(await service.get(id))
+        } finally {
+            loading.value = false
+        }
+    }
+
+    async function move(board) {
+        if (!session.value) throw new Error('Сессия ещё не загружена')
+        applySession(await service.move(session.value.id, board))
     }
 
     async function offer() {
-        if (session.value !== null) {
-            const response = await client.get(`${API_SESSION_URL}/${session.value.id}/offer`);
-            session.value = response.data;
-        } else {
-            message.error('Вы не подключены к сессии');
-        }
-    }
-
-    async function move(request) {
-        if (session.value !== null) {
-            const response = await client.post(`${API_SESSION_URL}/${session.value.id}/move`, request);
-            session.value = response.data;
-        } else {
-            message.error('Вы не подключены к сесии');
-        }
+        if (!session.value) throw new Error('Сессия ещё не загружена')
+        applySession(await service.offer(session.value.id))
     }
 
     function clear() {
-        listeners.clear();
-        session.value = null;
-        subscribe.value?.unsubscribe();
-        subscribe.value = null;
+        subscription?.unsubscribe()
+        subscription = null
+        sessionId = null
+        session.value = null
     }
 
-    function listener(event, listener) {
-        listeners.set(event, listener);
+    onScopeDispose(clear)
+
+    return {
+        session: readonly(session),
+        loading: readonly(loading),
+        connect,
+        move,
+        offer,
+        clear,
     }
-
-    function _initSession(_session) {
-        session.value = _session;
-        subscribe.value = socket.subscribe('/user/queue/session', event => {
-            const response = JSON.parse(event.body);
-            this.session = response.payload;
-
-            listeners.get(response.type)(response.type, this.session);
-        });
-    }
-
-    return { load, offer, move, clear };
 }

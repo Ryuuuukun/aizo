@@ -27,13 +27,13 @@ const routes = [
                 path: 'online',
                 name: 'Lobby',
                 component: () => import('@/pages/LobbyPage.vue'),
-                meta: { requiresAuth: false },
+                meta: { requiresAuth: true },
             },
             {
                 path: 'online/:id',
                 name: 'OnlineGame',
                 component: () => import('@/pages/OnlineGamePage.vue'),
-                meta: { requiresAuth: false },
+                meta: { requiresAuth: true },
             },
             {
                 path: 'rules',
@@ -55,12 +55,16 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-    // const authStore = useAuthStore();
+    const authStore = useAuthStore()
 
-    // if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    //     authStore.login({ redirectUri: window.location.origin + to.fullPath })
-    //     return false
-    // }
+    if (to.meta.requiresAuth && !authStore.isInitialized) {
+        await authStore.initAuth()
+    }
+
+    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        await authStore.login({ redirectUri: window.location.origin + to.fullPath })
+        return false
+    }
 })
 
 export default router

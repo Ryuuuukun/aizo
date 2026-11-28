@@ -2,6 +2,8 @@ import Keycloak from 'keycloak-js';
 import { defineStore } from 'pinia';
 import { markRaw } from 'vue';
 
+let initializationPromise = null
+
 export const useAuthStore = defineStore('auth', {
     state: () => ({
         user: undefined,
@@ -11,13 +13,20 @@ export const useAuthStore = defineStore('auth', {
         isInitialized: false
     }),
     actions: {
-        async initAuth() {
+        initAuth() {
+            if (initializationPromise) return initializationPromise
+
             const instance = new Keycloak({
                 url: `${window.location.origin}/auth`,
                 realm: 'aizo',
                 clientId: 'aizo frontend'
             });
 
+            this.keycloak = markRaw(instance);
+            initializationPromise = this._initialize(instance);
+            return initializationPromise
+        },
+        async _initialize(instance) {
             instance.updateToken = instance.updateToken.bind(instance);
             instance.onTokenExpired = async () => {
                 try {
@@ -31,13 +40,8 @@ export const useAuthStore = defineStore('auth', {
             };
 
             try {
-                const authenticated = await instance.init({
-                    onLoad: 'check-sso',
-                    silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
-                    checkLoginIframe: false
-                });
+                const authenticated = await instance.init({ checkLoginIframe: false });
 
-                this.keycloak = markRaw(instance);
                 this.isAuthenticated = authenticated;
 
                 if (authenticated) {
@@ -52,10 +56,15 @@ export const useAuthStore = defineStore('auth', {
                 }
             } catch (error) {
                 console.error('Exception initialization Keycloak:', error);
+                this.isAuthenticated = false;
+            } finally {
+                this.isInitialized = true;
             }
         },
-        login(options = {}) {
-            this.keycloak?.login(options);
+        async login(options = {}) {
+            if (!this.isInitialized) await this.initAuth()
+            if (!this.keycloak) throw new Error('Keycloak не инициализирован')
+            return this.keycloak.login(options)
         },
         logout() {
             this.keycloak?.logout({ redirectUri: window.location.origin });

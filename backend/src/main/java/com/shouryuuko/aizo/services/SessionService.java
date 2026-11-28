@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +56,7 @@ public class SessionService {
                 .createdAt(LocalDateTime.now())
                 .timeLimit(request.getTimerLimit())
                 .creatorTimeLeftMs(request.getTimerLimit())
-                .creatorTimeLeftMs(request.getTimerLimit())
+                .opponentTimeLeftMs(request.getTimerLimit())
                 .build();
 
         return this.sessionMapper.toResponse(this.sessionRepository.save(session));
@@ -77,6 +78,9 @@ public class SessionService {
         session.setOpponent(user);
         session.setStatus(Session.GameStatus.ACTIVE);
         session.setStartedAt(LocalDateTime.now());
+        session.setTurnPlayer(session.getCreator());
+        session.getState().setTurn(session.getCreator());
+        session.setTurnStartedAt(Instant.now());
 
         var event = DeliveryEvent.builder()
                 .type("SESSION_START")
@@ -156,11 +160,24 @@ public class SessionService {
 
         state.setBoard(request.getBoard());
         state.setLastTurn(state.getTurn());
+        if (session.getTurnStartedAt() != null) {
+            long elapsedMs = Math.max(0L,
+                    java.time.Duration.between(session.getTurnStartedAt(), Instant.now()).toMillis());
+            if (session.getCreator().getId().equals(state.getTurn().getId())) {
+                if (session.getCreatorTimeLeftMs() != null) {
+                    session.setCreatorTimeLeftMs(Math.max(0L, session.getCreatorTimeLeftMs() - elapsedMs));
+                }
+            } else if (session.getOpponentTimeLeftMs() != null) {
+                session.setOpponentTimeLeftMs(Math.max(0L, session.getOpponentTimeLeftMs() - elapsedMs));
+            }
+        }
         if (session.getCreator().getId().equals(state.getTurn().getId())) {
             state.setTurn(session.getOpponent());
         } else {
             state.setTurn(session.getCreator());
         }
+        session.setTurnPlayer(state.getTurn());
+        session.setTurnStartedAt(Instant.now());
 
         var response = this.sessionMapper.toResponse(this.sessionRepository.save(session));
         var event = DeliveryEvent.builder()

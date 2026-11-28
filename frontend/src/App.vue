@@ -4,12 +4,23 @@ import {
     NConfigProvider, NMessageProvider, NDialogProvider, NNotificationProvider,
     ruRU, dateRuRU,
 } from 'naive-ui'
-import { onMounted, onUnmounted } from 'vue'
+import { onUnmounted } from 'vue'
 
 import { socket } from '@/api/websocket.js'
 import { useAuthStore } from './stores/auth'
 
 const authStore = useAuthStore()
+socket.authTokenProvider = async () => {
+    if (!authStore.isAuthenticated || !authStore.keycloak) return null
+    try {
+        await authStore.keycloak.updateToken(30)
+        authStore.token = authStore.keycloak.token
+        return authStore.token
+    } catch (error) {
+        console.error('Failed to refresh Keycloak token for WebSocket', error)
+        return null
+    }
+}
 
 const themeOverrides = {
     common: {
@@ -25,20 +36,6 @@ const themeOverrides = {
     Input:  { borderRadius: '10px' },
     Dialog: { borderRadius: '16px' },
 }
-
-onMounted(async () => {
-    socket.authTokenProvider = async () => {
-        if (!authStore.isAuthenticated || !authStore.keycloak) return null
-        try {
-            await authStore.keycloak.updateToken(30)
-            return authStore.token
-        } catch (e) {
-            console.error('Failed to refresh Keycloak token for WebSocket', e)
-            return null
-        }
-    }
-    await socket.connect()
-})
 
 onUnmounted(async () => {
     await socket.disconnect()
