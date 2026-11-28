@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NAlert, NCard, NForm, NFormItem, NInputNumber, NSelect, NButton, NFlex } from 'naive-ui'
 import {
     NAlert,
     NButton,
@@ -25,7 +24,7 @@ const store = useGameStore()
 const size = ref(8)
 const duration = ref(300)
 const started = ref(false)
-const mode = ref('local') // 'local' или 'bot'
+const mode = ref('local')
 
 const durationOptions = [
     { label: '3 минуты', value: 180 },
@@ -37,6 +36,8 @@ const durationOptions = [
 const modeOptions = [
     { label: 'Два игрока (локально)', value: 'local' },
     { label: 'Против бота', value: 'bot' },
+]
+
 const difficulty = ref('random')
 const isComputerThinking = ref(false)
 let computerTurnTimer = null
@@ -55,12 +56,13 @@ onUnmounted(() => {
     if (computerTurnTimer !== null) window.clearTimeout(computerTurnTimer)
 })
 
-function start(mode = 'local') {
+function start(selectedMode = 'local') {
     try {
-        store.newGame({ size: size.value, mode, difficulty: difficulty.value })
+        mode.value = selectedMode
+        store.newGame({ size: size.value, mode: selectedMode, difficulty: difficulty.value })
         started.value = true
 
-        if (mode.value === 'bot') {
+        if (selectedMode === 'bot') {
             maybeBotMove()
         }
     } catch (error) {
@@ -68,17 +70,6 @@ function start(mode = 'local') {
     }
 }
 
-function onOfferEnd() { store.offerEnd() }
-function onPointClick(x, y) {
-    if (mode.value === 'bot' && store.currentPlayer === 'R') return
-    
-    store.handlePointClick(x, y)
-    
-    if (mode.value === 'bot' && store.currentPlayer === 'R' && !store.isFinished) {
-        maybeBotMove()
-    }
-}
-function onAgain() { start() }
 function scheduleComputerTurn() {
     if (store.mode !== 'computer'
         || store.currentPlayer !== 'R'
@@ -116,8 +107,14 @@ function onOfferEnd() {
 
 function onPointClick(x, y) {
     if (isComputerThinking.value) return
+    if (mode.value === 'bot' && store.currentPlayer === 'R') return
+
     store.handlePointClick(x, y)
     scheduleComputerTurn()
+
+    if (mode.value === 'bot' && store.currentPlayer === 'R' && !store.isFinished) {
+        maybeBotMove()
+    }
 }
 
 function onAgain() {
@@ -129,17 +126,18 @@ function onCloseResult() {
     router.push({ name: 'Menu' })
 }
 
-function onTimeout() { store.offerEnd() }
-
+function onTimeout() {
+    store.offerEnd()
+}
 
 // имитация бота
 function maybeBotMove() {
     setTimeout(() => {
         if (store.isFinished || store.currentPlayer !== 'R') return
 
-        const size = store.size
-        for (let y = 0; y <= size; y++) {
-            for (let x = 0; x <= size; x++) {
+        const boardSize = store.size
+        for (let y = 0; y <= boardSize; y++) {
+            for (let x = 0; x <= boardSize; x++) {
                 if (store.board[y][x] === '.') {
                     store.handlePointClick(x, y)
                     setTimeout(() => {
@@ -151,8 +149,6 @@ function maybeBotMove() {
         }
     }, 1000)
 }
-
-
 </script>
 
 <template>
@@ -171,6 +167,7 @@ function maybeBotMove() {
                 </n-form-item>
                 <n-form-item label="Время на игрока">
                     <n-select v-model:value="duration" :options="durationOptions" />
+                </n-form-item>
                 <n-form-item label="Сложность компьютера">
                     <n-select v-model:value="difficulty" :options="difficultyOptions" />
                 </n-form-item>
