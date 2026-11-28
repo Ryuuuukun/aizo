@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { NAlert, NCard, NForm, NFormItem, NInputNumber, NSelect, NButton, NFlex } from 'naive-ui'
 import {
     NAlert,
     NButton,
@@ -22,7 +23,20 @@ const router = useRouter()
 const store = useGameStore()
 
 const size = ref(8)
+const duration = ref(300)
 const started = ref(false)
+const mode = ref('local') // 'local' или 'bot'
+
+const durationOptions = [
+    { label: '3 минуты', value: 180 },
+    { label: '5 минут', value: 300 },
+    { label: '10 минут', value: 600 },
+    { label: '15 минут', value: 900 },
+]
+
+const modeOptions = [
+    { label: 'Два игрока (локально)', value: 'local' },
+    { label: 'Против бота', value: 'bot' },
 const difficulty = ref('random')
 const isComputerThinking = ref(false)
 let computerTurnTimer = null
@@ -30,6 +44,7 @@ let computerTurnTimer = null
 const difficultyOptions = [
     { label: 'Случайная', value: 'random' },
     { label: 'Сложная', value: 'hard' },
+    { label: 'Монте-Карло', value: 'monte-carlo' },
 ]
 
 onMounted(() => {
@@ -44,11 +59,26 @@ function start(mode = 'local') {
     try {
         store.newGame({ size: size.value, mode, difficulty: difficulty.value })
         started.value = true
+
+        if (mode.value === 'bot') {
+            maybeBotMove()
+        }
     } catch (error) {
         store.error = error.message
     }
 }
 
+function onOfferEnd() { store.offerEnd() }
+function onPointClick(x, y) {
+    if (mode.value === 'bot' && store.currentPlayer === 'R') return
+    
+    store.handlePointClick(x, y)
+    
+    if (mode.value === 'bot' && store.currentPlayer === 'R' && !store.isFinished) {
+        maybeBotMove()
+    }
+}
+function onAgain() { start() }
 function scheduleComputerTurn() {
     if (store.mode !== 'computer'
         || store.currentPlayer !== 'R'
@@ -98,25 +128,49 @@ function onCloseResult() {
     store.reset()
     router.push({ name: 'Menu' })
 }
+
+function onTimeout() { store.offerEnd() }
+
+
+// имитация бота
+function maybeBotMove() {
+    setTimeout(() => {
+        if (store.isFinished || store.currentPlayer !== 'R') return
+
+        const size = store.size
+        for (let y = 0; y <= size; y++) {
+            for (let x = 0; x <= size; x++) {
+                if (store.board[y][x] === '.') {
+                    store.handlePointClick(x, y)
+                    setTimeout(() => {
+                        store.handlePointClick(x, y)
+                    }, 300)
+                    return
+                }
+            }
+        }
+    }, 1000)
+}
+
+
 </script>
 
 <template>
     <div>
-        <n-alert
-            v-if="store.error"
-            type="error"
-            closable
-            class="game-error"
-            @close="store.clearError()"
-        >
+        <n-alert v-if="store.error" type="error" closable class="game-error" @close="store.clearError()">
             {{ store.error }}
         </n-alert>
 
         <n-card v-if="!started" title="Новая игра" class="setup-card">
             <n-form>
+                <n-form-item label="Режим игры">
+                    <n-select v-model:value="mode" :options="modeOptions" />
+                </n-form-item>
                 <n-form-item label="Размер поля (4–20)">
                     <n-input-number v-model:value="size" :min="4" :max="20" />
                 </n-form-item>
+                <n-form-item label="Время на игрока">
+                    <n-select v-model:value="duration" :options="durationOptions" />
                 <n-form-item label="Сложность компьютера">
                     <n-select v-model:value="difficulty" :options="difficultyOptions" />
                 </n-form-item>
@@ -150,9 +204,8 @@ function onCloseResult() {
                     @point-click="onPointClick"
                 />
             </div>
-
             <div class="game-layout__side">
-                <GameSidebar />
+                <GameSidebar :mode="mode" @timeout="onTimeout" />
                 <GameControls
                     :can-undo="!isComputerThinking && store.canUndo"
                     :can-end="!isComputerThinking && store.canEndGame"
@@ -179,10 +232,7 @@ function onCloseResult() {
 </template>
 
 <style lang="scss" scoped>
-.game-error {
-    margin-bottom: 16px;
-}
-
+.game-error { margin-bottom: 16px; }
 .setup-card {
     max-width: 520px;
     margin: 40px auto;
@@ -199,14 +249,8 @@ function onCloseResult() {
     gap: 28px;
     align-items: start;
     padding-top: 8px;
-
-    &__side {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-    }
+    &__side { display: flex; flex-direction: column; gap: 14px; }
 }
-
 @media (max-width: 900px) {
     .game-layout { grid-template-columns: 1fr; }
 }
