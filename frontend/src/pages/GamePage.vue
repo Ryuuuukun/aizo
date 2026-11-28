@@ -44,6 +44,7 @@ let computerTurnTimer = null
 const difficultyOptions = [
     { label: 'Случайная', value: 'random' },
     { label: 'Сложная', value: 'hard' },
+    { label: 'Монте-Карло', value: 'monte-carlo' },
 ]
 
 onMounted(() => {

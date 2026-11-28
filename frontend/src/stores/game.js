@@ -13,6 +13,7 @@ import {
     chooseBoundary,
     findLegalBoundary,
     hardDecision,
+    monteCarloDecision,
     randomDecision,
 } from '../ai/randomAlgortihm.js'
 
@@ -91,7 +92,7 @@ export const useGameStore = defineStore('game', {
             if (!['local', 'computer'].includes(mode)) {
                 throw new Error('Выбран неизвестный режим игры.')
             }
-            if (!['random', 'hard'].includes(difficulty)) {
+            if (!['random', 'hard', 'monte-carlo', 'monteCarlo', 'expert'].includes(difficulty)) {
                 throw new Error('Выбрана неизвестная сложность компьютера.')
             }
 
@@ -162,8 +163,16 @@ export const useGameStore = defineStore('game', {
                 return true
             }
 
-            const decide = this.difficulty === 'hard' ? hardDecision : randomDecision
-            const point = decide(this.game.board, 'R')
+            const decide = this.difficulty === 'monte-carlo'
+                || this.difficulty === 'monteCarlo'
+                || this.difficulty === 'expert'
+                ? monteCarloDecision
+                : (this.difficulty === 'hard' ? hardDecision : randomDecision)
+            const point = this.difficulty === 'monte-carlo'
+                || this.difficulty === 'monteCarlo'
+                || this.difficulty === 'expert'
+                ? monteCarloDecision(this.game, 'R')
+                : decide(this.game.board, 'R')
             const afterPoint = placePoint(this.game, point.x, point.y)
             const newBoundary = chooseBoundary(
                 findLegalBoundary(afterPoint, 'R', point),
