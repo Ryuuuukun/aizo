@@ -174,8 +174,11 @@ function maybeBotMove() {
             </n-form>
             <n-flex justify="end">
                 <n-button @click="start('local')">Начать локальную игру</n-button>
-                <n-button type="primary" @click="start('computer')">
+                <n-button @click="start('computer')">
                     Играть с компьютером
+                </n-button>
+                <n-button type="primary" @click="start('treasures')">
+                    Играть с сокровищами
                 </n-button>
             </n-flex>
         </n-card>
@@ -195,6 +198,7 @@ function maybeBotMove() {
                     :size="store.size"
                     :board="store.board"
                     :territories="store.territories"
+                    :treasures="store.treasures"
                     :pending-move="store.pendingMove"
                     :current-player="store.currentPlayer"
                     :status="store.game.status"
@@ -202,7 +206,7 @@ function maybeBotMove() {
                 />
             </div>
             <div class="game-layout__side">
-                <GameSidebar :mode="mode" @timeout="onTimeout" />
+                <GameSidebar :mode="store.mode" @timeout="onTimeout" />
                 <GameControls
                     :can-undo="!isComputerThinking && store.canUndo"
                     :can-end="!isComputerThinking && store.canEndGame"

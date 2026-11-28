@@ -5,6 +5,7 @@ const props = defineProps({
     size: { type: Number, required: true },
     board: { type: Array, required: true },
     territories: { type: Array, required: true },
+    treasures: { type: Array, default: () => [] },
     pendingMove: { type: Object, default: null },
     currentPlayer: { type: String, required: true },
     status: { type: String, required: true },
@@ -41,6 +42,18 @@ function boundaryPoints(boundary) {
             return `${position.x},${position.y}`
         })
         .join(' ')
+}
+
+function treasurePoints({ x, y }) {
+    const centerX = margin + (x + 0.5) * step
+    const centerY = margin + (y + 0.5) * step
+    const radius = 8
+    return [
+        `${centerX},${centerY - radius}`,
+        `${centerX + radius},${centerY}`,
+        `${centerX},${centerY + radius}`,
+        `${centerX - radius},${centerY}`,
+    ].join(' ')
 }
 
 function pointLabel(color, x, y) {
@@ -90,6 +103,16 @@ function isPendingPoint(x, y) {
                 :points="boundaryPoints(territory.boundary)"
                 :class="['game-board__territory', `game-board__territory--${territory.owner}`]"
             />
+            <g
+                v-for="treasure in treasures"
+                :key="`${treasure.x}-${treasure.y}`"
+                class="game-board__treasure"
+                role="img"
+                aria-label="Сокровище"
+            >
+                <title>Сокровище</title>
+                <polygon :points="treasurePoints(treasure)" />
+            </g>
             <polyline
                 v-if="movePath.length > 1"
                 :points="boundaryPoints(movePath)"
@@ -157,6 +180,13 @@ function isPendingPoint(x, y) {
 .game-board__territory--R {
     stroke: #d32f2f;
     fill: #d32f2f;
+}
+
+.game-board__treasure {
+    fill: #f4b400;
+    stroke: #9a6700;
+    stroke-width: 1.5;
+    pointer-events: none;
 }
 
 .game-board__draft {

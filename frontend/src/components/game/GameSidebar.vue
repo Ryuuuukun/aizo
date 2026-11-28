@@ -65,7 +65,7 @@ const players = computed(() => {
     }
 
     const base = store.players
-    if (props.mode === 'bot') {
+    if (props.mode === 'computer') {
         return [
             base[0],
             { ...base[1], name: 'Бот' },
