@@ -13,6 +13,7 @@ import com.shouryuuko.aizo.exception.NotFoundException;
 import com.shouryuuko.aizo.exception.SessionBadRequestException;
 import com.shouryuuko.aizo.exception.SessionConflictException;
 import com.shouryuuko.aizo.exception.SessionFullException;
+import com.shouryuuko.aizo.map.GameStateMapper;
 import com.shouryuuko.aizo.map.SessionMapper;
 import com.shouryuuko.aizo.repository.SessionRepository;
 import com.shouryuuko.aizo.repository.UserRepository;
@@ -34,6 +35,7 @@ public class SessionService {
     private final UserRepository userRepository;
 
     private final SessionMapper sessionMapper;
+    private final GameStateMapper gameStateMapper;
 
     private final DeliveryEventPublisher eventPublisher;
 
@@ -154,7 +156,8 @@ public class SessionService {
             throw new SessionBadRequestException("Not your turn");
         }
 
-        var state = session.getState();
+        var state = this.gameStateMapper.clone(session.getState());
+
         state.setBoard(request.getBoard());
         state.setLastTurn(state.getTurn());
         if (session.getTurnStartedAt() != null) {

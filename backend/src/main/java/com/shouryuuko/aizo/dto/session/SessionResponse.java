@@ -2,11 +2,14 @@ package com.shouryuuko.aizo.dto.session;
 
 import com.shouryuuko.aizo.dto.user.UserResponse;
 import com.shouryuuko.aizo.entity.Board;
+import com.shouryuuko.aizo.entity.GameState;
 import com.shouryuuko.aizo.entity.Session;
 import lombok.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -25,6 +28,9 @@ public class SessionResponse {
     private Board board;
 
     private Session.GameStatus status;
+
+    private GameStateResponse state;
+    private List<GameStateResponse> history;
 
     private LocalDateTime createdAt;
     private LocalDateTime startedAt;

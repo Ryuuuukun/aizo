@@ -15,7 +15,7 @@ import java.util.List;
 
 @Mapper(componentModel = "spring",
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE,
-        uses = { UserMapper.class })
+        uses = { UserMapper.class, GameStateMapper.class })
 public interface SessionMapper {
     @Mapping(target = "board", source = "state.board")
     SessionResponse toResponse(Session session);
