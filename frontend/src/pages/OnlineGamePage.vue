@@ -4,6 +4,6 @@ import { NCard } from 'naive-ui'
 
 <template>
     <n-card title="Онлайн-игра">
-        <p>Комната игры (шаг 4).</p>
+        <p>Комната игры.</p>
     </n-card>
 </template>

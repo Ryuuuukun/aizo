@@ -101,7 +101,6 @@ function onCloseResult() {
             </div>
         </div>
 
-        <!-- Результат -->
         <EndGameDialog
             :show="store.isFinished"
             :winner="store.winner"

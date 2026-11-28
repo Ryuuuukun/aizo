@@ -17,7 +17,7 @@ const cards = [
     {
         title: 'Правила',
         description: 'Что это?',
-        to: null,
+        to: { name: 'Rules' }, 
         accent: 'green',
     },
 ]

@@ -35,6 +35,11 @@ const routes = [
                 component: () => import('@/pages/OnlineGamePage.vue'),
                 meta: { requiresAuth: false },
             },
+            {
+                path: 'rules',
+                name: 'Rules',
+                component: () => import('@/pages/RulesPage.vue'),
+            },
         ],
     },
     {
