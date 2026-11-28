@@ -1,36 +1,143 @@
 <script setup>
-import { NButton, NInput } from 'naive-ui';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { NAlert, NCard, NForm, NFormItem, NInputNumber, NButton, NFlex } from 'naive-ui'
+import { useGameStore } from '@/stores/game'
+import { onMounted } from 'vue'
 
-import { online } from '@/api/services/game.js';
+import GameBoard from '@/components/game/GameBoard.vue'
+import GameSidebar from '@/components/game/GameSidebar.vue'
+import GameControls from '@/components/game/GameControls.vue'
+import EndGameDialog from '@/components/game/EndGameDialog.vue'
 
-const session = computed(() => online.session);
-const join = ref('');
+const router = useRouter()
+const store = useGameStore()
+
+const size = ref(8)
+const started = ref(false)
 
 onMounted(() => {
-    try {
-        online.active();
-    } catch (error) {
-        // активной сесси может не быть
-    }
-});
+    if (store.isFinished) store.reset()
+})
 
-onUnmounted(() => {
-    online.clear();
-});
+
+function start() {
+    try {
+        store.newGame({ size: size.value, mode: 'local' })
+        started.value = true
+    } catch (error) {
+        store.error = error.message
+    }
+}
+
+function onOfferEnd() {
+    store.offerEnd()
+}
+
+function onPointClick(x, y) {
+    store.handlePointClick(x, y)
+}
+
+function onAgain() {
+    start()
+}
+
+function onCloseResult() {
+    store.reset()
+    router.push({ name: 'Menu' })
+}
 </script>
 
 <template>
+    <div>
+        <n-alert
+            v-if="store.error"
+            type="error"
+            closable
+            class="game-error"
+            @close="store.clearError()"
+        >
+            {{ store.error }}
+        </n-alert>
 
-    <n-button @click="online.create(10)">
-        Создать сессию
-    </n-button>
-    <n-input v-model:value="join"/>
-    <n-button @click="online.join(join)">
-        Присоединиться к сессии
-    </n-button>
-    <n-button @click="online.offer()">
-        Закончить сессию
-    </n-button>
-    Текущая сессия: {{ session }}
+        <n-card v-if="!started" title="Новая локальная игра" class="setup-card">
+            <n-form>
+                <n-form-item label="Размер поля (4–20)">
+                    <n-input-number v-model:value="size" :min="4" :max="20" />
+                </n-form-item>
+            </n-form>
+            <n-flex justify="end">
+                <n-button type="primary" @click="start">Начать игру</n-button>
+            </n-flex>
+        </n-card>
+
+        <div v-else class="game-layout">
+            <div class="game-layout__board">
+                <GameBoard
+                    :size="store.size"
+                    :board="store.board"
+                    :territories="store.territories"
+                    :pending-move="store.pendingMove"
+                    :current-player="store.currentPlayer"
+                    :status="store.game.status"
+                    @point-click="onPointClick"
+                />
+            </div>
+
+            <div class="game-layout__side">
+                <GameSidebar />
+                <GameControls
+                    :can-undo="store.canUndo"
+                    :can-end="store.canEndGame"
+                    :wall-building="store.isWallBuilding"
+                    @undo="store.undoMove"
+                    @cancel-wall="store.cancelWall"
+                    @confirm-wall="store.confirmWall"
+                    @offer-end="onOfferEnd"
+                />
+                <n-button block quaternary @click="router.push({ name: 'Menu' })">
+                    ← В меню
+                </n-button>
+            </div>
+        </div>
+
+        <!-- Результат -->
+        <EndGameDialog
+            :show="store.isFinished"
+            :winner="store.winner"
+            :players="store.players"
+            @again="onAgain"
+            @close="onCloseResult"
+        />
+    </div>
 </template>
+
+<style lang="scss" scoped>
+.game-error {
+    margin-bottom: 16px;
+}
+
+.setup-card {
+    max-width: 520px;
+    margin: 40px auto;
+    box-shadow: 0 8px 32px rgba(74, 108, 247, .08);
+}
+
+.game-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 28px;
+    align-items: start;
+    padding-top: 8px;
+
+    &__side {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+}
+
+@media (max-width: 900px) {
+    .game-layout { grid-template-columns: 1fr; }
+}
+</style>
